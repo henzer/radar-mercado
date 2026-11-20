@@ -1,7 +1,9 @@
-"""Descarga datos públicos (FRED + CFTC) y genera data.json para el dashboard.
+"""Descarga datos públicos (FRED + CFTC) y genera:
+  - data.json : dashboard (desde 2021)
+  - sim.json  : simulador de entrenamiento (11 sectores + mercado, desde 2011)
 
 Sin dependencias externas: solo la librería estándar de Python.
-Uso:  python scripts/update.py            -> escribe data.json en la raíz del repo
+Uso:  python scripts/update.py
 """
 import csv
 import datetime as dt
@@ -13,7 +15,8 @@ import time
 import urllib.parse
 import urllib.request
 
-START = "2021-01-01"  # margen para calcular la media de 40 semanas desde 2022
+START = "2021-01-01"      # dashboard: margen para la media de 40 semanas desde 2022
+SIM_START = "2011-05-01"  # simulador: toda la historia disponible de los sectores
 UA = {"User-Agent": "Mozilla/5.0 (mercado-dashboard; GitHub Actions)"}
 
 # nombre visible -> id de FRED
@@ -34,6 +37,8 @@ FRED = {
     "Utilities": "NASDAQNQUSB65",
 }
 EXTRA = {"VIX": "VIXCLS", "HY spread": "BAMLH0A0HYM2"}
+SECTORS = [n for n, sid in FRED.items() if sid.startswith("NASDAQNQUSB")]
+SIM_MARKET = ("Mercado EE.UU.", "NASDAQNQUSB")  # Nasdaq US Benchmark (todo el mercado)
 
 COT_URL = "https://publicreporting.cftc.gov/resource/gpe5-46if.json"
 COT_CODE = "209742"  # E-mini Nasdaq-100
@@ -52,10 +57,10 @@ def get(url, tries=4):
             time.sleep(5 * (i + 1))
 
 
-def fred_daily(series_id):
+def fred_daily(series_id, start):
     url = (
         "https://fred.stlouisfed.org/graph/fredgraph.csv?"
-        + urllib.parse.urlencode({"id": series_id, "cosd": START})
+        + urllib.parse.urlencode({"id": series_id, "cosd": start})
     )
     rows = csv.reader(io.StringIO(get(url)))
     next(rows)
@@ -79,26 +84,39 @@ def to_weekly(daily):
     return dict(sorted(last.values()))
 
 
+def align(weekly, weeks):
+    """Alinea una serie semanal a un calendario; rellena huecos con el valor previo."""
+    by_week = {week_key(d): v for d, v in weekly.items()}
+    vals, prev = [], None
+    for k in weeks:
+        v = by_week.get(k, prev)
+        vals.append(None if v is None else round(v, 2))
+        prev = v if v is not None else prev
+    return vals
+
+
+def write(root, name, data):
+    path = os.path.join(root, name)
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, separators=(",", ":"))
+    print(f"OK -> {path} ({len(data['labels'])} semanas, último dato {data['labels'][-1]})")
+
+
 def main():
     root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    weekly = {}
-    for name, sid in {**FRED, **EXTRA}.items():
-        print(f"FRED {sid} ({name})")
-        weekly[name] = to_weekly(fred_daily(sid))
+    weekly_all = {}
+    for name, sid in {**FRED, **EXTRA, SIM_MARKET[0]: SIM_MARKET[1]}.items():
+        start = SIM_START if (name in SECTORS or name == SIM_MARKET[0]) else START
+        print(f"FRED {sid} ({name}) desde {start}")
+        weekly_all[name] = to_weekly(fred_daily(sid, start))
 
-    # Calendario común: semanas del S&P 500, etiquetadas por el último día hábil
+    # ---- dashboard (desde START), calendario del S&P 500
+    weekly = {n: {d: v for d, v in w.items() if d >= START}
+              for n, w in weekly_all.items() if n != SIM_MARKET[0]}
     spx = weekly["S&P 500"]
     weeks = [week_key(d) for d in spx]
     labels = list(spx)
-    series = {}
-    for name, w in weekly.items():
-        by_week = {week_key(d): v for d, v in w.items()}
-        vals, prev = [], None
-        for k in weeks:
-            v = by_week.get(k, prev)  # rellena huecos (feriados) con el valor previo
-            vals.append(None if v is None else round(v, 2))
-            prev = v if v is not None else prev
-        series[name] = vals
+    series = {name: align(w, weeks) for name, w in weekly.items()}
 
     print("CFTC COT Nasdaq-100")
     q = urllib.parse.urlencode({
@@ -115,17 +133,19 @@ def main():
         cot["long"].append(int(float(r["lev_money_positions_long"])))
         cot["short"].append(int(float(r["lev_money_positions_short"])))
 
-    data = {
-        "updated": dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%d %H:%M UTC"),
-        "last_week": labels[-1],
-        "labels": labels,
-        "series": series,
-        "cot": cot,
-    }
-    path = os.path.join(root, "data.json")
-    with open(path, "w", encoding="utf-8") as f:
-        json.dump(data, f, ensure_ascii=False, separators=(",", ":"))
-    print(f"OK -> {path} ({len(labels)} semanas, último dato {labels[-1]})")
+    now = dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+    write(root, "data.json", {
+        "updated": now, "last_week": labels[-1], "labels": labels,
+        "series": series, "cot": cot,
+    })
+
+    # ---- simulador (desde SIM_START), calendario del mercado total
+    mkt = weekly_all[SIM_MARKET[0]]
+    sweeks = [week_key(d) for d in mkt]
+    write(root, "sim.json", {
+        "updated": now, "labels": list(mkt),
+        "series": {n: align(weekly_all[n], sweeks) for n in [*SECTORS, SIM_MARKET[0]]},
+    })
 
 
 if __name__ == "__main__":
