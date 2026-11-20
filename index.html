@@ -144,6 +144,24 @@ function render(D){
   // ---- detalle
   const xs={ticks:{color:tick,maxTicksLimit:8,callback:function(v){return this.getLabelForValue(v).slice(0,7)}},grid:{display:false}};
   const base={responsive:true,maintainAspectRatio:false,interaction:{mode:"index",intersect:false}};
+
+  // ---- línea vertical sincronizada entre las 3 gráficas de tiempo
+  const SYNC=[];let hov=null;
+  const near=(lab,d)=>{let lo=0,hi=lab.length-1;while(lo<hi){const m=(lo+hi)>>1;if(lab[m]<d)lo=m+1;else hi=m}
+    if(lo>0&&(new Date(d)-new Date(lab[lo-1]))<(new Date(lab[lo])-new Date(d)))lo--;return lo};
+  const clearSync=()=>{hov=null;SYNC.forEach(o=>{o.tooltip.setActiveElements([],{x:0,y:0});o.update("none")})};
+  Chart.register({id:"sync",
+    afterEvent(c,{event:e}){if(!SYNC.includes(c))return;
+      if(e.type==="mouseout"){if(hov)clearSync();return}
+      if(!["mousemove","touchmove","touchstart","click"].includes(e.type))return;
+      const a=c.chartArea;if(e.x<a.left||e.x>a.right||e.y<a.top||e.y>a.bottom)return;
+      const i=Math.round(c.scales.x.getValueForPixel(e.x)),lab=c.data.labels;if(i<0||i>=lab.length)return;
+      const d=lab[i];if(d===hov)return;hov=d;
+      SYNC.forEach(o=>{if(o===c){o.draw();return}const j=near(o.data.labels,d);
+        const act=o.data.datasets.map((ds,k)=>ds.data[j]!=null?{datasetIndex:k,index:j}:null).filter(Boolean);
+        o.tooltip.setActiveElements(act,{x:o.scales.x.getPixelForValue(j),y:o.chartArea.top+10});o.update("none")})},
+    afterDraw(c){if(!hov||!SYNC.includes(c))return;const j=near(c.data.labels,hov),x=c.scales.x.getPixelForValue(j),{ctx,chartArea:a}=c;
+      ctx.save();ctx.strokeStyle=ink;ctx.lineWidth=1;ctx.setLineDash([3,3]);ctx.beginPath();ctx.moveTo(x,a.top);ctx.lineTo(x,a.bottom);ctx.stroke();ctx.restore()}});
   const cd=new Chart($("d"),{type:"line",data:{labels:L,datasets:[{data:[],borderColor:"#6250d6",borderWidth:2,tension:.2,pointBorderWidth:0,pointBackgroundColor:"#e34948"},{data:[],borderColor:"#e34948",borderDash:[4,4],borderWidth:1,pointRadius:0},{data:[],borderColor:tick,borderWidth:1,pointRadius:0}]},
     options:{...base,plugins:{legend:{display:false},tooltip:{filter:i=>i.datasetIndex===0,callbacks:{label:c=>"Distancia: "+sg(c.parsed.y)}}},scales:{x:xs,y:{ticks:{color:tick,callback:v=>v+"%"},grid:{color:grid}}}}});
   const cr=new Chart($("r"),{type:"line",data:{labels:L,datasets:[{data:[],borderColor:"#2a78d6",borderWidth:2,pointRadius:0,tension:.2},{data:[],borderColor:"#eb6834",borderDash:[5,4],borderWidth:2,pointRadius:0}]},
@@ -159,8 +177,10 @@ function render(D){
   show("Nasdaq-100");
 
   // ---- COT
-  new Chart($("cot"),{type:"line",data:{labels:C.date,datasets:[{data:C.long,borderColor:"#1baf7a",borderWidth:2,pointRadius:0,tension:.2},{data:C.short,borderColor:"#e34948",borderDash:[5,4],borderWidth:2,pointRadius:0,tension:.2}]},
+  const cc=new Chart($("cot"),{type:"line",data:{labels:C.date,datasets:[{data:C.long,borderColor:"#1baf7a",borderWidth:2,pointRadius:0,tension:.2},{data:C.short,borderColor:"#e34948",borderDash:[5,4],borderWidth:2,pointRadius:0,tension:.2}]},
     options:{...base,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>(c.datasetIndex?"Cortos: ":"Largos: ")+c.parsed.y.toLocaleString()}}},scales:{x:xs,y:{ticks:{color:tick,callback:v=>Math.round(v/1000)+"k"},grid:{color:grid}}}}});
+  SYNC.push(cd,cr,cc);
+  document.addEventListener("touchstart",e=>{if(hov&&!e.target.closest("canvas"))clearSync()},{passive:true});
 }
 </script>
 </body>
