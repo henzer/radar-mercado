@@ -1,9 +1,9 @@
 <!doctype html>
-<html lang="es">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Radar de Mercado</title>
+<title>Market Radar</title>
 <style>
 :root{--bg:#fcfcfb;--card:#f3f2ee;--ink:#0b0b0b;--ink2:#52514e;--muted:#898781;--line:#e1e0d9;--border:rgba(11,11,11,.10);
 --ok:#0a7d0a;--okbg:#e6f4e6;--warn:#8a5a00;--warnbg:#fdf1d6;--bad:#b02a2a;--badbg:#fbe7e7;--acc:#1f5fb0;--accbg:#e4eefa;}
@@ -42,45 +42,45 @@ h2{font-size:16px;font-weight:600;margin:32px 0 4px}
 </head>
 <body>
 <main>
-<h1>Radar de mercado</h1>
-<div style="font-size:13px;margin:2px 0 0"><a href="simulador.html" style="color:var(--acc)">Simulador de entrenamiento →</a></div>
-<div class="sub" id="upd">Cargando datos…</div>
+<h1>Market radar</h1>
+<div style="font-size:13px;margin:2px 0 0"><a href="simulador.html" style="color:var(--acc)">Training simulator →</a></div>
+<div class="sub" id="upd">Loading data…</div>
 
 <div class="grid" id="tiles"></div>
 
-<h2>Alertas</h2>
-<p class="hint">Reglas de reducción en escalones. Se evalúan con el último dato semanal.</p>
+<h2>Alerts</h2>
+<p class="hint">Step-down reduction rules, evaluated on the latest weekly data.</p>
 <div class="alerts" id="alerts"></div>
 
-<h2>Mapa de rotación sectorial</h2>
-<p class="hint">Horizontal: fuerza relativa del sector vs. S&amp;P 500 (sobre su media de 40 semanas). Vertical: cambio de esa fuerza en 8 semanas. Toca un sector para ver su detalle. Arrastra la línea de tiempo (o dale a Reproducir) para ver cómo rotan; la cola muestra las últimas 6 semanas.</p>
-<div class="scrub"><button class="chip" id="play">Reproducir</button><input type="range" id="tl" aria-label="Línea de tiempo del mapa de rotación"><button class="chip" id="today">Hoy</button></div>
+<h2>Sector rotation map</h2>
+<p class="hint">Horizontal: sector relative strength vs. S&amp;P 500 (relative to its 40-week average). Vertical: 8-week change in that strength. Tap a sector to see its detail. Drag the timeline (or press Play) to watch sectors rotate; the tail shows the last 6 weeks.</p>
+<div class="scrub"><button class="chip" id="play">Play</button><input type="range" id="tl" aria-label="Rotation map timeline"><button class="chip" id="today">Today</button></div>
 <div class="tld" id="tld"></div>
-<div class="box" style="height:380px"><canvas id="rrg" role="img" aria-label="Mapa de rotación de 11 sectores"></canvas></div>
+<div class="box" style="height:380px"><canvas id="rrg" role="img" aria-label="Rotation map of 11 sectors"></canvas></div>
 <div style="margin-top:16px">
-<div class="rw h"><span>Sector</span><span>Estado</span><span class="num">vs 200d</span><span class="num">Fuerza rel.</span><span class="num m8">Mom. 8s</span></div>
+<div class="rw h"><span>Sector</span><span>Status</span><span class="num">vs 200d</span><span class="num">Rel. strength</span><span class="num m8">Mom. 8w</span></div>
 <div id="tbl"></div></div>
 
-<h2>Detalle</h2>
+<h2>Detail</h2>
 <div class="chips" id="chips"></div>
 <p class="hint" id="cap1"></p>
-<div class="box" style="height:240px"><canvas id="d" role="img" aria-label="Distancia a la media de 200 días"></canvas></div>
-<div class="leg" style="margin-top:20px"><span id="cap2"></span><span><i class="sw" style="background:#2a78d6"></i>Sector ÷ S&amp;P 500</span><span><i class="dash" style="border-color:#eb6834"></i>Su media 40 sem.</span></div>
-<div class="box" style="height:200px"><canvas id="r" role="img" aria-label="Fuerza relativa contra el S&P 500"></canvas></div>
+<div class="box" style="height:240px"><canvas id="d" role="img" aria-label="Distance to the 200-day average"></canvas></div>
+<div class="leg" style="margin-top:20px"><span id="cap2"></span><span><i class="sw" style="background:#2a78d6"></i>Sector ÷ S&amp;P 500</span><span><i class="dash" style="border-color:#eb6834"></i>Its 40-wk average</span></div>
+<div class="box" style="height:200px"><canvas id="r" role="img" aria-label="Relative strength vs. the S&P 500"></canvas></div>
 
-<h2>Posicionamiento de hedge funds en futuros Nasdaq-100</h2>
-<p class="hint">CFTC, "Leveraged Funds". Cortos en máximo de 52 semanas suele marcar capitulación (no vender). Cortos subiendo rápido con largos planos = nerviosismo.</p>
-<div class="leg"><span><i class="sw" style="background:#1baf7a"></i>Largos</span><span><i class="dash" style="border-color:#e34948"></i>Cortos</span></div>
-<div class="box" style="height:220px"><canvas id="cot" role="img" aria-label="Contratos largos y cortos de hedge funds"></canvas></div>
+<h2>Hedge fund positioning in Nasdaq-100 futures</h2>
+<p class="hint">CFTC, "Leveraged Funds". Shorts at a 52-week high often mark capitulation (don't sell). Shorts rising fast with flat longs = nervousness.</p>
+<div class="leg"><span><i class="sw" style="background:#1baf7a"></i>Longs</span><span><i class="dash" style="border-color:#e34948"></i>Shorts</span></div>
+<div class="box" style="height:220px"><canvas id="cot" role="img" aria-label="Hedge fund long and short contracts"></canvas></div>
 
-<p class="foot">Fuentes: FRED (S&amp;P 500, Nasdaq-100, PHLX Semiconductor, Nasdaq US Benchmark sector indexes, VIX, ICE BofA HY spread) y CFTC Traders in Financial Futures. Datos semanales; la media de 40 semanas aproxima la de 200 días. Herramienta informativa, no es asesoría financiera.</p>
+<p class="foot">Sources: FRED (S&amp;P 500, Nasdaq-100, PHLX Semiconductor, Nasdaq US Benchmark sector indexes, VIX, ICE BofA HY spread) and CFTC Traders in Financial Futures. Weekly data; the 40-week average approximates the 200-day. Informational tool, not financial advice.</p>
 </main>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <script>
-const SECTORS=["Tecnología","Telecom","Salud","Financieras","Real estate","Consumo discrecional","Consumo básico","Industriales","Materiales","Energía","Utilities"];
-const DETAIL=["Nasdaq-100","Tecnología","Semis (SOX)","S&P 500",...SECTORS.slice(1)];
-const QN=["Líder","Debilitándose","Rezagado","Mejorando"],QC=["#0ca30c","#fab219","#d03b3b","#2a78d6"];
+const SECTORS=["Technology","Telecom","Health Care","Financials","Real Estate","Consumer Discretionary","Consumer Staples","Industrials","Materials","Energy","Utilities"];
+const DETAIL=["Nasdaq-100","Technology","Semis (SOX)","S&P 500",...SECTORS.slice(1)];
+const QN=["Leading","Weakening","Lagging","Improving"],QC=["#0ca30c","#fab219","#d03b3b","#2a78d6"];
 const QS=[["var(--okbg)","var(--ok)"],["var(--warnbg)","var(--warn)"],["var(--badbg)","var(--bad)"],["var(--accbg)","var(--acc)"]];
 const dark=matchMedia("(prefers-color-scheme: dark)").matches;
 const grid=dark?"#2c2c2a":"#e1e0d9",tick="#898781",ink=dark?"#c3c2b7":"#52514e";
@@ -97,41 +97,41 @@ function analyze(px,spx){
 const quad=a=>a.rsr>=0?(a.mom>=0?0:1):(a.mom>=0?3:2);
 
 fetch("data.json?t="+Date.now()).then(r=>{if(!r.ok)throw new Error(r.status);return r.json()}).then(render).catch(e=>{
-  $("upd").innerHTML='<div class="err">No se pudieron cargar los datos ('+e.message+'). Revisa que data.json exista en el repositorio.</div>';
+  $("upd").innerHTML='<div class="err">Could not load data ('+e.message+'). Check that data.json exists in the repository.</div>';
 });
 
 function render(D){
   const L=D.labels,S=D.series,spx=S["S&P 500"],A={};
   for(const k of DETAIL)A[k]=analyze(S[k],spx);
-  $("upd").textContent="Datos al "+D.last_week+" · actualizado "+D.updated;
+  $("upd").textContent="Data as of "+D.last_week+" · updated "+D.updated;
 
   // ---- tiles
-  const ndx=A["Nasdaq-100"],tec=A["Tecnología"],sp=A["S&P 500"];
-  const state=a=>a.now<0?["Debajo de su media","var(--bad)"]:a.now>=15||a.now>=a.p90?["Sobreextendido","var(--warn)"]:["Tendencia sana","var(--ok)"];
+  const ndx=A["Nasdaq-100"],tec=A["Technology"],sp=A["S&P 500"];
+  const state=a=>a.now<0?["Below its average","var(--bad)"]:a.now>=15||a.now>=a.p90?["Overextended","var(--warn)"]:["Healthy trend","var(--ok)"];
   const tile=(n,a)=>{const s=state(a);return `<div class="tile"><div class="l">${n} vs 200d</div><div class="v">${sg(a.now)}</div><div class="s" style="color:${s[1]}">${s[0]}</div></div>`};
   const last=a=>{for(let i=a.length-1;i>=0;i--)if(a[i]!=null)return a[i]};
   const vix=last(S["VIX"]),hy=last(S["HY spread"]);
   const lead=SECTORS.filter(k=>quad(A[k])===0).length;
-  const regime=ndx.now<0?["Defensivo","var(--bad)"]:ndx.now>=15?["Precaución","var(--warn)"]:["Ofensivo","var(--ok)"];
-  $("tiles").innerHTML=tile("Nasdaq-100",ndx)+tile("Tecnología",tec)+tile("S&P 500",sp)+
-   `<div class="tile"><div class="l">Régimen</div><div class="v" style="color:${regime[1]}">${regime[0]}</div><div class="s" style="color:var(--muted)">${lead} de 11 sectores líderes</div></div>`+
-   `<div class="tile"><div class="l">VIX</div><div class="v">${vix?.toFixed(1)}</div><div class="s" style="color:${vix>25?"var(--bad)":vix>20?"var(--warn)":"var(--ok)"}">${vix>25?"Estrés alto":vix>20?"Elevado":"Calmo"}</div></div>`+
-   `<div class="tile"><div class="l">Spread high yield</div><div class="v">${hy?.toFixed(2)}%</div><div class="s" style="color:${hy>5?"var(--bad)":hy>4?"var(--warn)":"var(--ok)"}">${hy>5?"Estrés de crédito":hy>4?"Ampliándose":"Normal"}</div></div>`;
+  const regime=ndx.now<0?["Defensive","var(--bad)"]:ndx.now>=15?["Caution","var(--warn)"]:["Offensive","var(--ok)"];
+  $("tiles").innerHTML=tile("Nasdaq-100",ndx)+tile("Technology",tec)+tile("S&P 500",sp)+
+   `<div class="tile"><div class="l">Regime</div><div class="v" style="color:${regime[1]}">${regime[0]}</div><div class="s" style="color:var(--muted)">${lead} of 11 sectors leading</div></div>`+
+   `<div class="tile"><div class="l">VIX</div><div class="v">${vix?.toFixed(1)}</div><div class="s" style="color:${vix>25?"var(--bad)":vix>20?"var(--warn)":"var(--ok)"}">${vix>25?"High stress":vix>20?"Elevated":"Calm"}</div></div>`+
+   `<div class="tile"><div class="l">High-yield spread</div><div class="v">${hy?.toFixed(2)}%</div><div class="s" style="color:${hy>5?"var(--bad)":hy>4?"var(--warn)":"var(--ok)"}">${hy>5?"Credit stress":hy>4?"Widening":"Normal"}</div></div>`;
 
-  // ---- alertas
+  // ---- alerts
   const C=D.cot,n=C.short.length,sh52=Math.max(...C.short.slice(-52)),sh8=C.short[n-9],lg8=C.long[n-9];
   const prevMaxN=Math.max(...S["Nasdaq-100"].slice(-27,-1)),ndxNew=S["Nasdaq-100"].at(-1)>=prevMaxN;
   const rules=[
-    {on:ndx.now>=15,t:"Sobreextensión Nasdaq-100",d:`Distancia a su media: ${sg(ndx.now)} (umbral +15%). Acción: recortar un escalón (10–15%) por semana, máx. 40%.`},
-    {on:tec.now>=tec.p90,t:"Sobreextensión Tecnología",d:`Distancia: ${sg(tec.now)} (su percentil 90: ${sg(tec.p90)}). Acción: otro escalón de recorte.`},
-    {on:ndx.now<0,t:"Ruptura de tendencia",d:`Nasdaq-100 ${ndx.now<0?"debajo":"arriba"} de su media de 200 días (${sg(ndx.now)}). Si está debajo: bajar a 50% o menos invertido.`},
-    {on:ndx.prev<0&&ndx.now>=0,t:"Recuperación de tendencia",d:"Nasdaq-100 volvió arriba de su media esta semana. Acción: subir exposición gradualmente."},
-    {on:C.short[n-1]>=sh52,t:"Capitulación de hedge funds",d:`Cortos en máximo de 52 semanas (${C.short[n-1].toLocaleString()}). Acción: no vender en pánico.`},
-    {on:C.short[n-1]>=sh8*1.25&&C.long[n-1]<=lg8*1.05,t:"Coberturas acelerando",d:`Cortos ${sg((C.short[n-1]/sh8-1)*100)} en 8 semanas con largos planos. Señal de nerviosismo.`},
-    {on:ndxNew,t:"Nasdaq-100 en máximo de 6 meses",d:"Compara con tu portafolio: si tú no haces máximo, hay divergencia. Acción: recortar un escalón."},
+    {on:ndx.now>=15,t:"Nasdaq-100 overextended",d:`Distance to its average: ${sg(ndx.now)} (threshold +15%). Action: trim one step (10–15%) per week, max 40%.`},
+    {on:tec.now>=tec.p90,t:"Technology overextended",d:`Distance: ${sg(tec.now)} (its 90th percentile: ${sg(tec.p90)}). Action: another trim step.`},
+    {on:ndx.now<0,t:"Trend break",d:`Nasdaq-100 ${ndx.now<0?"below":"above"} its 200-day average (${sg(ndx.now)}). If below: cut to 50% or less invested.`},
+    {on:ndx.prev<0&&ndx.now>=0,t:"Trend recovery",d:"Nasdaq-100 moved back above its average this week. Action: raise exposure gradually."},
+    {on:C.short[n-1]>=sh52,t:"Hedge fund capitulation",d:`Shorts at a 52-week high (${C.short[n-1].toLocaleString()}). Action: don't panic-sell.`},
+    {on:C.short[n-1]>=sh8*1.25&&C.long[n-1]<=lg8*1.05,t:"Hedges accelerating",d:`Shorts ${sg((C.short[n-1]/sh8-1)*100)} in 8 weeks with flat longs. Sign of nervousness.`},
+    {on:ndxNew,t:"Nasdaq-100 at a 6-month high",d:"Compare with your portfolio: if you are not at a high, there is divergence. Action: trim one step."},
   ];
   rules.sort((a,b)=>b.on-a.on);
-  $("alerts").innerHTML=rules.map(r=>`<div class="al"><i class="dot" style="background:${r.on?"#d03b3b":"#b4b2a9"}"></i><div><b>${r.t}</b> · <span style="color:${r.on?"var(--bad)":"var(--muted)"}">${r.on?"ACTIVA":"inactiva"}</span><div class="d">${r.d}</div></div></div>`).join("");
+  $("alerts").innerHTML=rules.map(r=>`<div class="al"><i class="dot" style="background:${r.on?"#d03b3b":"#b4b2a9"}"></i><div><b>${r.t}</b> · <span style="color:${r.on?"var(--bad)":"var(--muted)"}">${r.on?"ACTIVE":"inactive"}</span><div class="d">${r.d}</div></div></div>`).join("");
 
   // ---- RRG
   const ks=SECTORS,N=L.length,TAIL=6;
@@ -140,17 +140,17 @@ function render(D){
   const ax=[],ay=[];for(const k of ks)for(let t=T0;t<N;t++){const v=at(A[k],t);ax.push(Math.abs(v.rsr));ay.push(Math.abs(v.mom))}
   const p98=a=>a.sort((x,y)=>x-y)[Math.floor(a.length*.98)];
   const xr=Math.ceil(p98(ax)*1.1)||5,yr=Math.ceil(p98(ay)*1.1)||5,cl=(v,r)=>Math.max(-r,Math.min(r,v));
-  const qp={id:"q",beforeDraw(c){const{ctx,chartArea:a,scales:{x,y}}=c,x0=x.getPixelForValue(0),y0=y.getPixelForValue(0);ctx.save();ctx.strokeStyle=tick;ctx.beginPath();ctx.moveTo(x0,a.top);ctx.lineTo(x0,a.bottom);ctx.moveTo(a.left,y0);ctx.lineTo(a.right,y0);ctx.stroke();ctx.font="12px sans-serif";ctx.fillStyle=tick;ctx.textAlign="right";ctx.fillText("Líder",a.right-6,a.top+14);ctx.fillText("Debilitándose",a.right-6,a.bottom-6);ctx.textAlign="left";ctx.fillText("Mejorando",a.left+6,a.top+14);ctx.fillText("Rezagado",a.left+6,a.bottom-6);ctx.restore()},
+  const qp={id:"q",beforeDraw(c){const{ctx,chartArea:a,scales:{x,y}}=c,x0=x.getPixelForValue(0),y0=y.getPixelForValue(0);ctx.save();ctx.strokeStyle=tick;ctx.beginPath();ctx.moveTo(x0,a.top);ctx.lineTo(x0,a.bottom);ctx.moveTo(a.left,y0);ctx.lineTo(a.right,y0);ctx.stroke();ctx.font="12px sans-serif";ctx.fillStyle=tick;ctx.textAlign="right";ctx.fillText("Leading",a.right-6,a.top+14);ctx.fillText("Weakening",a.right-6,a.bottom-6);ctx.textAlign="left";ctx.fillText("Improving",a.left+6,a.top+14);ctx.fillText("Lagging",a.left+6,a.bottom-6);ctx.restore()},
     afterDatasetsDraw(c){const{ctx}=c;ctx.save();ctx.font="12px sans-serif";ctx.fillStyle=ink;c.getDatasetMeta(0).data.forEach((p,i)=>{const r=p.x>c.chartArea.right-110;ctx.textAlign=r?"right":"left";ctx.fillText(ks[i],p.x+(r?-9:9),p.y+4)});ctx.restore()}};
   const rrg=new Chart($("rrg"),{type:"scatter",data:{datasets:[{data:[],pointRadius:6,pointHoverRadius:8,pointBackgroundColor:[],pointBorderColor:dark?"#151515":"#fcfcfb",pointBorderWidth:2,order:0},
       ...ks.map(()=>({data:[],showLine:true,borderWidth:1.5,pointRadius:2,pointHoverRadius:2,borderColor:"#888",pointBackgroundColor:"#888",order:1}))]},
-    options:{responsive:true,maintainAspectRatio:false,animation:{duration:0},plugins:{legend:{display:false},tooltip:{filter:i=>i.datasetIndex===0,callbacks:{label:c=>ks[c.dataIndex]+": fuerza "+sg(c.raw.rx)+", mom. "+sg(c.raw.ry)}}},
-    scales:{x:{min:-xr,max:xr,title:{display:true,text:"Fuerza relativa vs. S&P 500",color:tick},ticks:{color:tick,callback:v=>Math.round(v)+"%"},grid:{color:grid}},y:{min:-yr,max:yr,title:{display:true,text:"Cambio 8 semanas",color:tick},ticks:{color:tick,callback:v=>Math.round(v)+"%"},grid:{color:grid}}},
+    options:{responsive:true,maintainAspectRatio:false,animation:{duration:0},plugins:{legend:{display:false},tooltip:{filter:i=>i.datasetIndex===0,callbacks:{label:c=>ks[c.dataIndex]+": strength "+sg(c.raw.rx)+", mom. "+sg(c.raw.ry)}}},
+    scales:{x:{min:-xr,max:xr,title:{display:true,text:"Relative strength vs. S&P 500",color:tick},ticks:{color:tick,callback:v=>Math.round(v)+"%"},grid:{color:grid}},y:{min:-yr,max:yr,title:{display:true,text:"8-week change",color:tick},ticks:{color:tick,callback:v=>Math.round(v)+"%"},grid:{color:grid}}},
     onClick:(e,el)=>{const p=el.find(x=>x.datasetIndex===0);if(p)show(ks[p.index])}},plugins:[qp]});
 
   function drawTable(P){
     const ord=ks.slice().sort((a,b)=>([0,3,1,2].indexOf(quad(P[a]))-[0,3,1,2].indexOf(quad(P[b])))||P[b].rsr-P[a].rsr);
-    $("tbl").innerHTML=ord.map(k=>{const a=P[k],q=quad(a),ex=a.now>=A[k].p90;return `<div class="rw" data-k="${k}"><span>${k}</span><span><span class="bd" style="background:${QS[q][0]};color:${QS[q][1]}">${QN[q]}</span>${ex?`<span class="bd" style="background:var(--warnbg);color:var(--warn)">Extendido</span>`:""}</span><span class="num" style="color:${a.now<0?"var(--bad)":"inherit"}">${sg(a.now)}</span><span class="num">${sg(a.rsr)}</span><span class="num m8">${sg(a.mom)}</span></div>`}).join("");
+    $("tbl").innerHTML=ord.map(k=>{const a=P[k],q=quad(a),ex=a.now>=A[k].p90;return `<div class="rw" data-k="${k}"><span>${k}</span><span><span class="bd" style="background:${QS[q][0]};color:${QS[q][1]}">${QN[q]}</span>${ex?`<span class="bd" style="background:var(--warnbg);color:var(--warn)">Extended</span>`:""}</span><span class="num" style="color:${a.now<0?"var(--bad)":"inherit"}">${sg(a.now)}</span><span class="num">${sg(a.rsr)}</span><span class="num m8">${sg(a.mom)}</span></div>`}).join("");
     document.querySelectorAll(".rw[data-k]").forEach(r=>r.onclick=()=>{show(r.dataset.k);$("chips").scrollIntoView({behavior:"smooth"})});
   }
   function frame(t){
@@ -159,14 +159,14 @@ function render(D){
     ks.forEach((k,i)=>{const ds=rrg.data.datasets[i+1],col=QC[quad(P[k])];ds.borderColor=col+"66";ds.pointBackgroundColor=col+"88";
       ds.data=[];for(let s=Math.max(T0,t-TAIL);s<=t;s++){const v=at(A[k],s);ds.data.push({x:cl(v.rsr,xr),y:cl(v.mom,yr)})}});
     rrg.update("none");drawTable(P);
-    $("tld").textContent="Semana del "+L[t]+(t===N-1?" (hoy)":"");$("tl").value=t;
+    $("tld").textContent="Week of "+L[t]+(t===N-1?" (today)":"");$("tl").value=t;
   }
 
-  // ---- detalle
+  // ---- detail
   const xs={ticks:{color:tick,maxTicksLimit:8,callback:function(v){return this.getLabelForValue(v).slice(0,7)}},grid:{display:false}};
   const base={responsive:true,maintainAspectRatio:false,interaction:{mode:"index",intersect:false}};
 
-  // ---- línea vertical sincronizada entre las 3 gráficas de tiempo
+  // ---- synced vertical line across the 3 time charts
   const SYNC=[];let hov=null;
   const near=(lab,d)=>{let lo=0,hi=lab.length-1;while(lo<hi){const m=(lo+hi)>>1;if(lab[m]<d)lo=m+1;else hi=m}
     if(lo>0&&(new Date(d)-new Date(lab[lo-1]))<(new Date(lab[lo])-new Date(d)))lo--;return lo};
@@ -184,14 +184,14 @@ function render(D){
     afterDraw(c){if(!hov||!SYNC.includes(c))return;const j=near(c.data.labels,hov),x=c.scales.x.getPixelForValue(j),{ctx,chartArea:a}=c;
       ctx.save();ctx.strokeStyle=ink;ctx.lineWidth=1;ctx.setLineDash([3,3]);ctx.beginPath();ctx.moveTo(x,a.top);ctx.lineTo(x,a.bottom);ctx.stroke();ctx.restore()}});
   const cd=new Chart($("d"),{type:"line",data:{labels:L,datasets:[{data:[],borderColor:"#6250d6",borderWidth:2,tension:.2,pointBorderWidth:0,pointBackgroundColor:"#e34948"},{data:[],borderColor:"#e34948",borderDash:[4,4],borderWidth:1,pointRadius:0},{data:[],borderColor:tick,borderWidth:1,pointRadius:0}]},
-    options:{...base,plugins:{legend:{display:false},tooltip:{filter:i=>i.datasetIndex===0,callbacks:{label:c=>"Distancia: "+sg(c.parsed.y)}}},scales:{x:xs,y:{ticks:{color:tick,callback:v=>v+"%"},grid:{color:grid}}}}});
+    options:{...base,plugins:{legend:{display:false},tooltip:{filter:i=>i.datasetIndex===0,callbacks:{label:c=>"Distance: "+sg(c.parsed.y)}}},scales:{x:xs,y:{ticks:{color:tick,callback:v=>v+"%"},grid:{color:grid}}}}});
   const cr=new Chart($("r"),{type:"line",data:{labels:L,datasets:[{data:[],borderColor:"#2a78d6",borderWidth:2,pointRadius:0,tension:.2},{data:[],borderColor:"#eb6834",borderDash:[5,4],borderWidth:2,pointRadius:0}]},
-    options:{...base,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>(c.datasetIndex?"Media: ":"Fuerza rel.: ")+c.parsed.y.toFixed(1)}}},scales:{x:xs,y:{ticks:{color:tick},grid:{color:grid}}}}});
+    options:{...base,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>(c.datasetIndex?"Average: ":"Rel. strength: ")+c.parsed.y.toFixed(1)}}},scales:{x:xs,y:{ticks:{color:tick},grid:{color:grid}}}}});
   function show(k){const a=A[k];
     cd.data.datasets[0].data=a.d;cd.data.datasets[0].pointRadius=a.d.map(v=>v!=null&&v>=a.p90?3:0);
     cd.data.datasets[1].data=a.d.map(v=>v==null?null:a.p90);cd.data.datasets[2].data=a.d.map(v=>v==null?null:0);cd.update();
     const b=a.rs.find(v=>v!=null);cr.data.datasets[0].data=a.rs.map(v=>v==null?null:v/b*100);cr.data.datasets[1].data=a.rm.map(v=>v==null?null:v/b*100);cr.update();
-    $("cap1").textContent=k+": distancia a su media de 200 días. Línea roja = su percentil 90 ("+sg(a.p90)+"); puntos rojos = sobreextendido.";
+    $("cap1").textContent=k+": distance to its 200-day average. Red line = its 90th percentile ("+sg(a.p90)+"); red dots = overextended.";
     $("cap2").textContent=k+" vs. S&P 500 (base 100):";
     document.querySelectorAll(".chip").forEach(c=>c.classList.toggle("on",c.dataset.k===k));}
   DETAIL.forEach(k=>{const b=document.createElement("button");b.className="chip";b.dataset.k=k;b.textContent=k;b.onclick=()=>show(k);$("chips").appendChild(b)});
@@ -199,15 +199,15 @@ function render(D){
 
   // ---- COT
   const cc=new Chart($("cot"),{type:"line",data:{labels:C.date,datasets:[{data:C.long,borderColor:"#1baf7a",borderWidth:2,pointRadius:0,tension:.2},{data:C.short,borderColor:"#e34948",borderDash:[5,4],borderWidth:2,pointRadius:0,tension:.2}]},
-    options:{...base,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>(c.datasetIndex?"Cortos: ":"Largos: ")+c.parsed.y.toLocaleString()}}},scales:{x:xs,y:{ticks:{color:tick,callback:v=>Math.round(v/1000)+"k"},grid:{color:grid}}}}});
+    options:{...base,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>(c.datasetIndex?"Shorts: ":"Longs: ")+c.parsed.y.toLocaleString()}}},scales:{x:xs,y:{ticks:{color:tick,callback:v=>Math.round(v/1000)+"k"},grid:{color:grid}}}}});
   SYNC.push(cd,cr,cc);
 
-  // ---- línea de tiempo del mapa de rotación
+  // ---- rotation map timeline
   const tl=$("tl");tl.min=T0;tl.max=N-1;tl.step=1;
-  let timer=null;const stop=()=>{clearInterval(timer);timer=null;$("play").textContent="Reproducir"};
+  let timer=null;const stop=()=>{clearInterval(timer);timer=null;$("play").textContent="Play"};
   const go=t=>{frame(t);hov=L[t];SYNC.forEach(o=>o.draw())};
   tl.oninput=()=>{stop();go(+tl.value)};
-  $("play").onclick=()=>{if(timer)return stop();let t=+tl.value;if(t>=N-1)t=Math.max(T0,N-1-104);$("play").textContent="Pausa";
+  $("play").onclick=()=>{if(timer)return stop();let t=+tl.value;if(t>=N-1)t=Math.max(T0,N-1-104);$("play").textContent="Pause";
     timer=setInterval(()=>{t++;go(t);if(t>=N-1)stop()},150)};
   $("today").onclick=()=>{stop();frame(N-1);clearSync()};
   frame(N-1);
