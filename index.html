@@ -34,6 +34,8 @@ h2{font-size:16px;font-weight:600;margin:32px 0 4px}
 .leg{display:flex;flex-wrap:wrap;gap:16px;font-size:12px;color:var(--ink2);margin:0 0 6px}
 .leg span{display:flex;align-items:center;gap:5px}.sw{width:10px;height:10px;border-radius:2px}.dash{width:14px;border-top:2px dashed}
 .foot{color:var(--muted);font-size:12px;margin-top:32px}
+.scrub{display:flex;gap:10px;align-items:center;margin:4px 0 6px}.scrub input{flex:1;min-width:0;accent-color:var(--acc)}
+.tld{font-size:14px;font-weight:600;margin:0 0 8px;font-variant-numeric:tabular-nums}
 .err{background:var(--badbg);color:var(--bad);padding:12px;border-radius:10px}
 @media (max-width:600px){.rw{grid-template-columns:minmax(0,1.3fr) minmax(0,1.2fr) repeat(2,minmax(0,.8fr))}.rw .m8{display:none}}
 </style>
@@ -50,7 +52,9 @@ h2{font-size:16px;font-weight:600;margin:32px 0 4px}
 <div class="alerts" id="alerts"></div>
 
 <h2>Mapa de rotación sectorial</h2>
-<p class="hint">Horizontal: fuerza relativa del sector vs. S&amp;P 500 (sobre su media de 40 semanas). Vertical: cambio de esa fuerza en 8 semanas. Toca un sector para ver su detalle.</p>
+<p class="hint">Horizontal: fuerza relativa del sector vs. S&amp;P 500 (sobre su media de 40 semanas). Vertical: cambio de esa fuerza en 8 semanas. Toca un sector para ver su detalle. Arrastra la línea de tiempo (o dale a Reproducir) para ver cómo rotan; la cola muestra las últimas 6 semanas.</p>
+<div class="scrub"><button class="chip" id="play">Reproducir</button><input type="range" id="tl" aria-label="Línea de tiempo del mapa de rotación"><button class="chip" id="today">Hoy</button></div>
+<div class="tld" id="tld"></div>
 <div class="box" style="height:380px"><canvas id="rrg" role="img" aria-label="Mapa de rotación de 11 sectores"></canvas></div>
 <div style="margin-top:16px">
 <div class="rw h"><span>Sector</span><span>Estado</span><span class="num">vs 200d</span><span class="num">Fuerza rel.</span><span class="num m8">Mom. 8s</span></div>
@@ -129,17 +133,33 @@ function render(D){
   $("alerts").innerHTML=rules.map(r=>`<div class="al"><i class="dot" style="background:${r.on?"#d03b3b":"#b4b2a9"}"></i><div><b>${r.t}</b> · <span style="color:${r.on?"var(--bad)":"var(--muted)"}">${r.on?"ACTIVA":"inactiva"}</span><div class="d">${r.d}</div></div></div>`).join("");
 
   // ---- RRG
-  const ks=SECTORS,xr=Math.max(...ks.map(k=>Math.abs(A[k].rsr)))*1.25||5,yr=Math.max(...ks.map(k=>Math.abs(A[k].mom)))*1.2||5;
+  const ks=SECTORS,N=L.length,TAIL=6;
+  const at=(a,t)=>({rsr:(a.rs[t]/a.rm[t]-1)*100,mom:(a.rs[t]/a.rs[t-8]-1)*100,now:a.d[t]});
+  const T0=Math.max(...ks.map(k=>A[k].rm.findIndex(v=>v!=null)))+TAIL;
+  const ax=[],ay=[];for(const k of ks)for(let t=T0;t<N;t++){const v=at(A[k],t);ax.push(Math.abs(v.rsr));ay.push(Math.abs(v.mom))}
+  const p98=a=>a.sort((x,y)=>x-y)[Math.floor(a.length*.98)];
+  const xr=Math.ceil(p98(ax)*1.1)||5,yr=Math.ceil(p98(ay)*1.1)||5,cl=(v,r)=>Math.max(-r,Math.min(r,v));
   const qp={id:"q",beforeDraw(c){const{ctx,chartArea:a,scales:{x,y}}=c,x0=x.getPixelForValue(0),y0=y.getPixelForValue(0);ctx.save();ctx.strokeStyle=tick;ctx.beginPath();ctx.moveTo(x0,a.top);ctx.lineTo(x0,a.bottom);ctx.moveTo(a.left,y0);ctx.lineTo(a.right,y0);ctx.stroke();ctx.font="12px sans-serif";ctx.fillStyle=tick;ctx.textAlign="right";ctx.fillText("Líder",a.right-6,a.top+14);ctx.fillText("Debilitándose",a.right-6,a.bottom-6);ctx.textAlign="left";ctx.fillText("Mejorando",a.left+6,a.top+14);ctx.fillText("Rezagado",a.left+6,a.bottom-6);ctx.restore()},
     afterDatasetsDraw(c){const{ctx}=c;ctx.save();ctx.font="12px sans-serif";ctx.fillStyle=ink;c.getDatasetMeta(0).data.forEach((p,i)=>{const r=p.x>c.chartArea.right-110;ctx.textAlign=r?"right":"left";ctx.fillText(ks[i],p.x+(r?-9:9),p.y+4)});ctx.restore()}};
-  new Chart($("rrg"),{type:"scatter",data:{datasets:[{data:ks.map(k=>({x:A[k].rsr,y:A[k].mom})),pointRadius:6,pointHoverRadius:8,pointBackgroundColor:ks.map(k=>QC[quad(A[k])]),pointBorderColor:dark?"#151515":"#fcfcfb",pointBorderWidth:2}]},
-    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>ks[c.dataIndex]+": fuerza "+sg(c.parsed.x)+", mom. "+sg(c.parsed.y)}}},
+  const rrg=new Chart($("rrg"),{type:"scatter",data:{datasets:[{data:[],pointRadius:6,pointHoverRadius:8,pointBackgroundColor:[],pointBorderColor:dark?"#151515":"#fcfcfb",pointBorderWidth:2,order:0},
+      ...ks.map(()=>({data:[],showLine:true,borderWidth:1.5,pointRadius:2,pointHoverRadius:2,borderColor:"#888",pointBackgroundColor:"#888",order:1}))]},
+    options:{responsive:true,maintainAspectRatio:false,animation:{duration:0},plugins:{legend:{display:false},tooltip:{filter:i=>i.datasetIndex===0,callbacks:{label:c=>ks[c.dataIndex]+": fuerza "+sg(c.raw.rx)+", mom. "+sg(c.raw.ry)}}},
     scales:{x:{min:-xr,max:xr,title:{display:true,text:"Fuerza relativa vs. S&P 500",color:tick},ticks:{color:tick,callback:v=>Math.round(v)+"%"},grid:{color:grid}},y:{min:-yr,max:yr,title:{display:true,text:"Cambio 8 semanas",color:tick},ticks:{color:tick,callback:v=>Math.round(v)+"%"},grid:{color:grid}}},
-    onClick:(e,el)=>{if(el.length)show(ks[el[0].index])}},plugins:[qp]});
+    onClick:(e,el)=>{const p=el.find(x=>x.datasetIndex===0);if(p)show(ks[p.index])}},plugins:[qp]});
 
-  const ord=ks.slice().sort((a,b)=>([0,3,1,2].indexOf(quad(A[a]))-[0,3,1,2].indexOf(quad(A[b])))||A[b].rsr-A[a].rsr);
-  $("tbl").innerHTML=ord.map(k=>{const a=A[k],q=quad(a),ex=a.now>=a.p90;return `<div class="rw" data-k="${k}"><span>${k}</span><span><span class="bd" style="background:${QS[q][0]};color:${QS[q][1]}">${QN[q]}</span>${ex?`<span class="bd" style="background:var(--warnbg);color:var(--warn)">Extendido</span>`:""}</span><span class="num" style="color:${a.now<0?"var(--bad)":"inherit"}">${sg(a.now)}</span><span class="num">${sg(a.rsr)}</span><span class="num m8">${sg(a.mom)}</span></div>`}).join("");
-  document.querySelectorAll(".rw[data-k]").forEach(r=>r.onclick=()=>{show(r.dataset.k);$("chips").scrollIntoView({behavior:"smooth"})});
+  function drawTable(P){
+    const ord=ks.slice().sort((a,b)=>([0,3,1,2].indexOf(quad(P[a]))-[0,3,1,2].indexOf(quad(P[b])))||P[b].rsr-P[a].rsr);
+    $("tbl").innerHTML=ord.map(k=>{const a=P[k],q=quad(a),ex=a.now>=A[k].p90;return `<div class="rw" data-k="${k}"><span>${k}</span><span><span class="bd" style="background:${QS[q][0]};color:${QS[q][1]}">${QN[q]}</span>${ex?`<span class="bd" style="background:var(--warnbg);color:var(--warn)">Extendido</span>`:""}</span><span class="num" style="color:${a.now<0?"var(--bad)":"inherit"}">${sg(a.now)}</span><span class="num">${sg(a.rsr)}</span><span class="num m8">${sg(a.mom)}</span></div>`}).join("");
+    document.querySelectorAll(".rw[data-k]").forEach(r=>r.onclick=()=>{show(r.dataset.k);$("chips").scrollIntoView({behavior:"smooth"})});
+  }
+  function frame(t){
+    const P={};ks.forEach(k=>P[k]=at(A[k],t));
+    const m=rrg.data.datasets[0];m.data=ks.map(k=>({x:cl(P[k].rsr,xr),y:cl(P[k].mom,yr),rx:P[k].rsr,ry:P[k].mom}));m.pointBackgroundColor=ks.map(k=>QC[quad(P[k])]);
+    ks.forEach((k,i)=>{const ds=rrg.data.datasets[i+1],col=QC[quad(P[k])];ds.borderColor=col+"66";ds.pointBackgroundColor=col+"88";
+      ds.data=[];for(let s=Math.max(T0,t-TAIL);s<=t;s++){const v=at(A[k],s);ds.data.push({x:cl(v.rsr,xr),y:cl(v.mom,yr)})}});
+    rrg.update("none");drawTable(P);
+    $("tld").textContent="Semana del "+L[t]+(t===N-1?" (hoy)":"");$("tl").value=t;
+  }
 
   // ---- detalle
   const xs={ticks:{color:tick,maxTicksLimit:8,callback:function(v){return this.getLabelForValue(v).slice(0,7)}},grid:{display:false}};
@@ -180,6 +200,16 @@ function render(D){
   const cc=new Chart($("cot"),{type:"line",data:{labels:C.date,datasets:[{data:C.long,borderColor:"#1baf7a",borderWidth:2,pointRadius:0,tension:.2},{data:C.short,borderColor:"#e34948",borderDash:[5,4],borderWidth:2,pointRadius:0,tension:.2}]},
     options:{...base,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>(c.datasetIndex?"Cortos: ":"Largos: ")+c.parsed.y.toLocaleString()}}},scales:{x:xs,y:{ticks:{color:tick,callback:v=>Math.round(v/1000)+"k"},grid:{color:grid}}}}});
   SYNC.push(cd,cr,cc);
+
+  // ---- línea de tiempo del mapa de rotación
+  const tl=$("tl");tl.min=T0;tl.max=N-1;tl.step=1;
+  let timer=null;const stop=()=>{clearInterval(timer);timer=null;$("play").textContent="Reproducir"};
+  const go=t=>{frame(t);hov=L[t];SYNC.forEach(o=>o.draw())};
+  tl.oninput=()=>{stop();go(+tl.value)};
+  $("play").onclick=()=>{if(timer)return stop();let t=+tl.value;if(t>=N-1)t=Math.max(T0,N-1-104);$("play").textContent="Pausa";
+    timer=setInterval(()=>{t++;go(t);if(t>=N-1)stop()},150)};
+  $("today").onclick=()=>{stop();frame(N-1);clearSync()};
+  frame(N-1);
   document.addEventListener("touchstart",e=>{if(hov&&!e.target.closest("canvas"))clearSync()},{passive:true});
 }
 </script>
