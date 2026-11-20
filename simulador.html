@@ -166,7 +166,7 @@ function newGame(mode){
 function applyTargets(w){
   const V=value(),tgt={};let traded=0,sum=0;
   SEC.forEach(k=>{tgt[k]=V*w[k]/100;traded+=Math.abs(tgt[k]-G.h[k]);sum+=w[k]});
-  if(traded<1)return null;
+  if(traded<V*0.002)return null;
   const cost=traded*COST,Vn=V-cost,chg=[];
   SEC.forEach(k=>{const from=G.h[k]/V*100,to=w[k];if(Math.abs(to-from)>=0.05)chg.push([k,from,to]);G.h[k]=Vn*w[k]/100});
   G.cash=Vn*(100-sum)/100;G.costs+=cost;
@@ -245,8 +245,8 @@ function readTargets(){const w={};let s=0,bad=false;document.querySelectorAll("#
 function preview(){
   const{w,s,bad}=readTargets(),V=value();let traded=0;SEC.forEach(k=>traded+=Math.abs(V*w[k]/100-G.h[k]));
   $("cashT").textContent=(100-s).toFixed(1)+"%";
-  const over=s>100.05;$("apply").disabled=over||bad||traded<1;
-  $("tradeinfo").innerHTML=over?`<span class="err">Los objetivos suman ${s.toFixed(1)}%; el máximo es 100%.</span>`:bad?`<span class="err">Usa solo números positivos.</span>`:traded<1?"Sin cambios.":`Negociarías ${usd(traded)} · costo estimado ${usd(traded*COST)}`;
+  const over=s>100.05;$("apply").disabled=over||bad||traded<V*0.002;
+  $("tradeinfo").innerHTML=over?`<span class="err">Los objetivos suman ${s.toFixed(1)}%; el máximo es 100%.</span>`:bad?`<span class="err">Usa solo números positivos.</span>`:traded<V*0.002?"Sin cambios.":`Negociarías ${usd(traded)} · costo estimado ${usd(traded*COST)}`;
 }
 function endGame(why){
   G.done=true;save(G);
