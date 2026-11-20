@@ -57,6 +57,7 @@ td input{width:62px;font:inherit;text-align:right;padding:3px 6px;border:1px sol
     <label class="opt"><input type="radio" name="mode" value="blind" checked><div><b>Histórico a ciegas</b><br><span>Un periodo real al azar entre 2012 y hoy, sin fechas. Al terminar te revelo qué periodo era.</span></div></label>
     <label class="opt"><input type="radio" name="mode" value="synth"><div><b>Sintético por bloques</b><br><span>Un mercado nuevo armado con bloques aleatorios de 2 a 6 meses de semanas reales. Mantiene las correlaciones y caídas realistas, y cada partida es irrepetible.</span></div></label>
     <div class="bar"><button class="btn pri" id="start">Empezar</button><span class="err" id="loaderr"></span></div>
+    <div class="note">Nota: Consumo discrecional y Consumo básico solo existen desde sep-2020 (reclasificación de sectores); en escenarios anteriores juegas con 9 sectores.</div>
     <div class="note">Arrancas con 100% en efectivo y un año de historia visible para que los indicadores ya tengan contexto. Define tu asignación y avanza.</div>
   </div>
 </section>
@@ -80,7 +81,7 @@ td input{width:62px;font:inherit;text-align:right;padding:3px 6px;border:1px sol
     <thead><tr><th>Sector</th><th>Estado</th><th class="hm">vs 200d</th><th class="hm">Fuerza rel.</th><th class="hm">Mom. 8s</th><th>Peso actual</th><th>Objetivo %</th></tr></thead>
     <tbody id="tb"></tbody>
   </table></div>
-  <div class="bar"><button class="btn pri" id="apply">Aplicar cambios</button><button class="btn" id="reset">Deshacer</button><button class="btn" id="mkt">Repartir igual (11 sectores)</button><span class="note" id="tradeinfo"></span></div>
+  <div class="bar"><button class="btn pri" id="apply">Aplicar cambios</button><button class="btn" id="reset">Deshacer</button><button class="btn" id="mkt">Repartir igual</button><span class="note" id="tradeinfo"></span></div>
 
   <h2>Mapa de rotación</h2>
   <p class="hint">Fuerza relativa vs. mercado (horizontal) y su cambio en 8 semanas (vertical). Cola = últimas 6 semanas.</p>
@@ -105,6 +106,7 @@ td input{width:62px;font:inherit;text-align:right;padding:3px 6px;border:1px sol
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <script>
 const SECTORS=["Tecnología","Telecom","Salud","Financieras","Real estate","Consumo discrecional","Consumo básico","Industriales","Materiales","Energía","Utilities"];
+let SEC=SECTORS;
 const MKT="Mercado EE.UU.",CAP=100000,COST=0.001,WARM=56,TAIL=6,KEY="simRotacion.v1";
 const QN=["Líder","Debilitándose","Rezagado","Mejorando"],QC=["#0ca30c","#fab219","#d03b3b","#2a78d6"];
 const QS=[["var(--okbg)","var(--ok)"],["var(--warnbg)","var(--warn)"],["var(--badbg)","var(--bad)"],["var(--accbg)","var(--acc)"]];
@@ -125,9 +127,9 @@ let RAW=null,W=null,G=null,charts={};
 // ---------- datos reales -> retornos semanales conjuntos
 function prepRaw(D){
   const names=[...SECTORS,MKT],S=D.series;
-  let first=0;while(names.some(n=>S[n][first]==null))first++;
+  let first=0;while(S[MKT][first]==null||S["Tecnología"][first]==null)first++;
   const labels=D.labels.slice(first),P={};names.forEach(n=>P[n]=S[n].slice(first));
-  const R={};names.forEach(n=>{R[n]=[0];for(let i=1;i<labels.length;i++)R[n].push(P[n][i]/P[n][i-1]-1)});
+  const R={};names.forEach(n=>{R[n]=[0];for(let i=1;i<labels.length;i++)R[n].push(P[n][i]!=null&&P[n][i-1]!=null?P[n][i]/P[n][i-1]-1:null)});
   return{labels,R,N:labels.length};
 }
 // ---------- construir el "mundo" de la partida
@@ -135,10 +137,10 @@ function buildWorld(spec){
   const R=RAW.R,idx=[];
   if(spec.mode==="blind"){for(let i=spec.s0-WARM;i<RAW.N;i++)idx.push(i)}
   else spec.blocks.forEach(([s,l])=>{for(let i=s;i<s+l;i++)idx.push(i)});
-  const names=[...SECTORS,MKT],P={};
+  const S=SECTORS.filter(n=>idx.slice(1).every(i=>RAW.R[n][i]!=null)),names=[...S,MKT],P={};SEC=S;
   names.forEach(n=>{let v=100;P[n]=idx.map((i,j)=>j===0?v:(v*=1+R[n][i]))});
   const ret={};names.forEach(n=>ret[n]=idx.map(i=>R[n][i]));
-  const w={idx,P,ret,T:idx.length,A:{}};
+  const w={idx,P,ret,T:idx.length,A:{},S};
   const ma=(a,n)=>a.map((_,i)=>{if(i<n-1)return null;let s=0;for(let j=i-n+1;j<=i;j++)s+=a[j];return s/n});
   names.forEach(n=>{const px=P[n],m=ma(px,40),d=px.map((v,i)=>m[i]?(v/m[i]-1)*100:null);
     const rs=px.map((v,i)=>v/P[MKT][i]*100),rm=ma(rs,40);w.A[n]={px,m,d,rs,rm}});
@@ -155,18 +157,18 @@ const quad=a=>a.rsr>=0?(a.mom>=0?0:1):(a.mom>=0?3:2);
 const p90=(n,t)=>{const s=W.A[n].d.slice(0,t+1).filter(x=>x!=null).sort((a,b)=>a-b);return s[Math.floor(s.length*.9)]};
 
 // ---------- estado de la partida
-function value(g=G){return g.cash+SECTORS.reduce((s,k)=>s+g.h[k],0)}
+function value(g=G){return g.cash+SEC.reduce((s,k)=>s+g.h[k],0)}
 function newGame(mode){
   const spec=newSpec(mode);W=buildWorld(spec);
-  G={spec,t:WARM,cash:CAP,h:Object.fromEntries(SECTORS.map(k=>[k,0])),eq:[CAP],mk:[CAP],bh:[CAP],bhH:null,trades:[],costs:0,done:false};
+  G={spec,t:WARM,cash:CAP,h:Object.fromEntries(SEC.map(k=>[k,0])),eq:[CAP],mk:[CAP],bh:[CAP],bhH:null,trades:[],costs:0,done:false};
   save(G);startUI();
 }
 function applyTargets(w){
   const V=value(),tgt={};let traded=0,sum=0;
-  SECTORS.forEach(k=>{tgt[k]=V*w[k]/100;traded+=Math.abs(tgt[k]-G.h[k]);sum+=w[k]});
+  SEC.forEach(k=>{tgt[k]=V*w[k]/100;traded+=Math.abs(tgt[k]-G.h[k]);sum+=w[k]});
   if(traded<1)return null;
   const cost=traded*COST,Vn=V-cost,chg=[];
-  SECTORS.forEach(k=>{const from=G.h[k]/V*100,to=w[k];if(Math.abs(to-from)>=0.05)chg.push([k,from,to]);G.h[k]=Vn*w[k]/100});
+  SEC.forEach(k=>{const from=G.h[k]/V*100,to=w[k];if(Math.abs(to-from)>=0.05)chg.push([k,from,to]);G.h[k]=Vn*w[k]/100});
   G.cash=Vn*(100-sum)/100;G.costs+=cost;
   G.trades.push({wk:G.t-WARM,chg,cost});
   return cost;
@@ -176,9 +178,9 @@ function advance(n){
     if(G.t>=W.T-1){endGame("Se acabó la historia disponible para este escenario.");return}
     if(!G.bhH){G.bhH={...G.h,cash:G.cash}}
     G.t++;
-    SECTORS.forEach(k=>{G.h[k]*=1+W.ret[k][G.t];G.bhH[k]*=1+W.ret[k][G.t]});
+    SEC.forEach(k=>{G.h[k]*=1+W.ret[k][G.t];G.bhH[k]*=1+W.ret[k][G.t]});
     G.eq.push(value());G.mk.push(G.mk[G.mk.length-1]*(1+W.ret[MKT][G.t]));
-    G.bh.push(G.bhH.cash+SECTORS.reduce((s,k)=>s+G.bhH[k],0));
+    G.bh.push(G.bhH.cash+SEC.reduce((s,k)=>s+G.bhH[k],0));
   }
   save(G);render();
 }
@@ -198,10 +200,10 @@ function buildCharts(){
   charts.mk=new Chart($("mk"),{type:"line",data:{labels:[],datasets:[{data:[],borderColor:"#2a78d6",borderWidth:2,pointRadius:0,tension:.15},{data:[],borderColor:"#eb6834",borderDash:[5,4],borderWidth:2,pointRadius:0}]},
     options:{...base,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>(c.datasetIndex?"Media: ":"Mercado: ")+c.parsed.y.toFixed(1)}}},scales:{x:xs,y:{ticks:{color:tick},grid:{color:grid}}}}});
   const qp={id:"q",beforeDraw(c){const{ctx,chartArea:a,scales:{x,y}}=c,x0=x.getPixelForValue(0),y0=y.getPixelForValue(0);ctx.save();ctx.strokeStyle=tick;ctx.beginPath();ctx.moveTo(x0,a.top);ctx.lineTo(x0,a.bottom);ctx.moveTo(a.left,y0);ctx.lineTo(a.right,y0);ctx.stroke();ctx.font="12px sans-serif";ctx.fillStyle=tick;ctx.textAlign="right";ctx.fillText("Líder",a.right-6,a.top+14);ctx.fillText("Debilitándose",a.right-6,a.bottom-6);ctx.textAlign="left";ctx.fillText("Mejorando",a.left+6,a.top+14);ctx.fillText("Rezagado",a.left+6,a.bottom-6);ctx.restore()},
-    afterDatasetsDraw(c){const{ctx}=c;ctx.save();ctx.font="12px sans-serif";ctx.fillStyle=ink;c.getDatasetMeta(0).data.forEach((p,i)=>{const r=p.x>c.chartArea.right-110;ctx.textAlign=r?"right":"left";ctx.fillText(SECTORS[i],p.x+(r?-9:9),p.y+4)});ctx.restore()}};
+    afterDatasetsDraw(c){const{ctx}=c;ctx.save();ctx.font="12px sans-serif";ctx.fillStyle=ink;c.getDatasetMeta(0).data.forEach((p,i)=>{const r=p.x>c.chartArea.right-110;ctx.textAlign=r?"right":"left";ctx.fillText(SEC[i],p.x+(r?-9:9),p.y+4)});ctx.restore()}};
   charts.rrg=new Chart($("rrg"),{type:"scatter",data:{datasets:[{data:[],pointRadius:6,pointBackgroundColor:[],pointBorderColor:dark?"#151515":"#fcfcfb",pointBorderWidth:2,order:0},
-      ...SECTORS.map(()=>({data:[],showLine:true,borderWidth:1.5,pointRadius:2,borderColor:"#888",pointBackgroundColor:"#888",order:1}))]},
-    options:{responsive:true,maintainAspectRatio:false,animation:{duration:0},plugins:{legend:{display:false},tooltip:{filter:i=>i.datasetIndex===0,callbacks:{label:c=>SECTORS[c.dataIndex]+": fuerza "+sg(c.raw.rx)+", mom. "+sg(c.raw.ry)}}},
+      ...SEC.map(()=>({data:[],showLine:true,borderWidth:1.5,pointRadius:2,borderColor:"#888",pointBackgroundColor:"#888",order:1}))]},
+    options:{responsive:true,maintainAspectRatio:false,animation:{duration:0},plugins:{legend:{display:false},tooltip:{filter:i=>i.datasetIndex===0,callbacks:{label:c=>SEC[c.dataIndex]+": fuerza "+sg(c.raw.rx)+", mom. "+sg(c.raw.ry)}}},
       scales:{x:{title:{display:true,text:"Fuerza relativa vs. mercado",color:tick},ticks:{color:tick,callback:v=>Math.round(v)+"%"},grid:{color:grid}},y:{title:{display:true,text:"Cambio 8 semanas",color:tick},ticks:{color:tick,callback:v=>Math.round(v)+"%"},grid:{color:grid}}}},plugins:[qp]});
 }
 function render(){
@@ -221,15 +223,15 @@ function render(){
   const M=W.A[MKT];charts.mk.data.labels=lab;charts.mk.data.datasets[0].data=M.px.slice(from,t+1);charts.mk.data.datasets[1].data=M.m.slice(from,t+1);charts.mk.update();
   const md=M.d[t];$("mstate").innerHTML=`<b style="color:${md<0?"var(--bad)":md>=15?"var(--warn)":"var(--ok)"}">${md<0?"Debajo de su media":md>=15?"Sobreextendido":"Tendencia sana"} (${sg(md)})</b>`;
   // rotación
-  const P={};SECTORS.forEach(k=>P[k]=at(k,t));
-  const ax=[],ay=[];for(let s=Math.max(48,t-52);s<=t;s++)SECTORS.forEach(k=>{const v=at(k,s);ax.push(Math.abs(v.rsr));ay.push(Math.abs(v.mom))});
+  const P={};SEC.forEach(k=>P[k]=at(k,t));
+  const ax=[],ay=[];for(let s=Math.max(48,t-52);s<=t;s++)SEC.forEach(k=>{const v=at(k,s);ax.push(Math.abs(v.rsr));ay.push(Math.abs(v.mom))});
   const p=a=>a.sort((x,y)=>x-y)[Math.floor(a.length*.97)]||5,xr=Math.ceil(p(ax)*1.15),yr=Math.ceil(p(ay)*1.15),cl=(v,r)=>Math.max(-r,Math.min(r,v));
   const r=charts.rrg;r.options.scales.x.min=-xr;r.options.scales.x.max=xr;r.options.scales.y.min=-yr;r.options.scales.y.max=yr;
-  r.data.datasets[0].data=SECTORS.map(k=>({x:cl(P[k].rsr,xr),y:cl(P[k].mom,yr),rx:P[k].rsr,ry:P[k].mom}));r.data.datasets[0].pointBackgroundColor=SECTORS.map(k=>QC[quad(P[k])]);
-  SECTORS.forEach((k,i)=>{const ds=r.data.datasets[i+1],c=QC[quad(P[k])];ds.borderColor=c+"66";ds.pointBackgroundColor=c+"88";ds.data=[];for(let s=t-TAIL;s<=t;s++){const v=at(k,s);ds.data.push({x:cl(v.rsr,xr),y:cl(v.mom,yr)})}});
+  r.data.datasets[0].data=SEC.map(k=>({x:cl(P[k].rsr,xr),y:cl(P[k].mom,yr),rx:P[k].rsr,ry:P[k].mom}));r.data.datasets[0].pointBackgroundColor=SEC.map(k=>QC[quad(P[k])]);
+  SEC.forEach((k,i)=>{const ds=r.data.datasets[i+1],c=QC[quad(P[k])];ds.borderColor=c+"66";ds.pointBackgroundColor=c+"88";ds.data=[];for(let s=t-TAIL;s<=t;s++){const v=at(k,s);ds.data.push({x:cl(v.rsr,xr),y:cl(v.mom,yr)})}});
   r.update();
   // tabla de decisiones
-  const ord=SECTORS.slice().sort((a,b)=>([0,3,1,2].indexOf(quad(P[a]))-[0,3,1,2].indexOf(quad(P[b])))||P[b].rsr-P[a].rsr);
+  const ord=SEC.slice().sort((a,b)=>([0,3,1,2].indexOf(quad(P[a]))-[0,3,1,2].indexOf(quad(P[b])))||P[b].rsr-P[a].rsr);
   $("tb").innerHTML=ord.map(k=>{const a=P[k],q=quad(a),ex=a.now>=p90(k,t),w=G.h[k]/V*100;
     return `<tr><td>${k}</td><td><span class="bd" style="background:${QS[q][0]};color:${QS[q][1]}">${QN[q]}</span>${ex?` <span class="bd" style="background:var(--warnbg);color:var(--warn)">Ext.</span>`:""}</td>
     <td class="hm ${a.now<0?"neg":""}">${sg(a.now)}</td><td class="hm">${sg(a.rsr)}</td><td class="hm">${sg(a.mom)}</td><td>${w.toFixed(1)}%</td>
@@ -241,7 +243,7 @@ function render(){
 }
 function readTargets(){const w={};let s=0,bad=false;document.querySelectorAll("#tb input").forEach(i=>{let v=parseFloat(i.value);if(isNaN(v)||v<0){v=0;bad=bad||i.value!==""}w[i.dataset.k]=v;s+=v});return{w,s,bad}}
 function preview(){
-  const{w,s,bad}=readTargets(),V=value();let traded=0;SECTORS.forEach(k=>traded+=Math.abs(V*w[k]/100-G.h[k]));
+  const{w,s,bad}=readTargets(),V=value();let traded=0;SEC.forEach(k=>traded+=Math.abs(V*w[k]/100-G.h[k]));
   $("cashT").textContent=(100-s).toFixed(1)+"%";
   const over=s>100.05;$("apply").disabled=over||bad||traded<1;
   $("tradeinfo").innerHTML=over?`<span class="err">Los objetivos suman ${s.toFixed(1)}%; el máximo es 100%.</span>`:bad?`<span class="err">Usa solo números positivos.</span>`:traded<1?"Sin cambios.":`Negociarías ${usd(traded)} · costo estimado ${usd(traded*COST)}`;
@@ -270,7 +272,7 @@ $("adv4").onclick=()=>advance(4);
 $("stop").onclick=()=>endGame();
 $("apply").onclick=()=>{const{w,s,bad}=readTargets();if(s>100.05||bad)return;const c=applyTargets(w);if(c!=null){save(G);render()}};
 $("reset").onclick=()=>render();
-$("mkt").onclick=()=>{document.querySelectorAll("#tb input").forEach(i=>{i.value=(100/SECTORS.length).toFixed(1)});preview()};
+$("mkt").onclick=()=>{document.querySelectorAll("#tb input").forEach(i=>{i.value=(100/SEC.length).toFixed(1)});preview()};
 $("again").onclick=()=>{drop();G=null;["adv1","adv4","stop"].forEach(id=>$(id).disabled=false);$("game").classList.add("hide");$("result").classList.add("hide");$("setup").classList.remove("hide");window.scrollTo(0,0)};
 
 fetch("sim.json?t="+Date.now()).then(r=>{if(!r.ok)throw new Error(r.status);return r.json()}).then(D=>{
