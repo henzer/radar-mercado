@@ -1,13 +1,14 @@
-# Radar de mercado
+# Market radar
 
-Dashboard personal: tendencia del Nasdaq-100 y Tecnología vs. su media de 200 días,
-rotación de los 11 sectores contra el S&P 500, VIX, spreads de crédito y posicionamiento
-de hedge funds (CFTC).
+Personal dashboard: Nasdaq-100 and Technology trend vs. their 200-day average,
+rotation of the 11 sectors vs. the S&P 500, VIX, credit spreads and hedge fund
+positioning (CFTC). Includes a training simulator to practice sector rotation week by week.
 
-- `scripts/update.py` descarga los datos públicos de FRED y CFTC y escribe `data.json`.
-- `.github/workflows/update.yml` lo corre automáticamente de lunes a viernes (22:30 UTC)
-  y guarda el resultado en el repositorio. También se puede correr a mano desde la pestaña
-  **Actions → Actualizar datos → Run workflow**.
-- `index.html` es la página (GitHub Pages) que lee `data.json`.
+- `scripts/update.py` downloads public data from FRED and CFTC and writes `data.json` and `sim.json`.
+- `.github/workflows/update.yml` runs it automatically Monday to Friday (22:30 UTC)
+  and commits the result. You can also run it manually from
+  **Actions → Update data → Run workflow**.
+- `index.html` is the dashboard page (GitHub Pages) that reads `data.json`.
+- `simulador.html` is the training simulator that reads `sim.json`.
 
-Herramienta informativa; no es asesoría financiera.
+Informational tool; not financial advice.
