@@ -1,9 +1,9 @@
 <!doctype html>
-<html lang="es">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Simulador de Rotación</title>
+<title>Rotation Simulator</title>
 <style>
 :root{--bg:#fcfcfb;--card:#f3f2ee;--ink:#0b0b0b;--ink2:#52514e;--muted:#898781;--line:#e1e0d9;--border:rgba(11,11,11,.12);
 --ok:#0a7d0a;--okbg:#e6f4e6;--warn:#8a5a00;--warnbg:#fdf1d6;--bad:#b02a2a;--badbg:#fbe7e7;--acc:#1f5fb0;--accbg:#e4eefa;}
@@ -47,73 +47,73 @@ td input{width:62px;font:inherit;text-align:right;padding:3px 6px;border:1px sol
 </head>
 <body>
 <main>
-<h1>Simulador de rotación sectorial</h1>
-<div class="sub"><a href="./">← Volver al radar</a> · Entrena tu proceso: decide semana a semana con el mismo motor del dashboard.</div>
+<h1>Sector rotation simulator</h1>
+<div class="sub"><a href="./">← Back to the radar</a> · Train your process: decide week by week with the same engine as the dashboard.</div>
 
 <section id="setup">
   <div class="card">
-    <div style="font-weight:600;margin-bottom:4px">Nueva partida</div>
-    <div class="note">Capital inicial $100,000 · costo por operación 0.1% del monto negociado · el efectivo no rinde intereses · índices de precio (sin dividendos).</div>
-    <label class="opt"><input type="radio" name="mode" value="blind" checked><div><b>Histórico a ciegas</b><br><span>Un periodo real al azar entre 2012 y hoy, sin fechas. Al terminar te revelo qué periodo era.</span></div></label>
-    <label class="opt"><input type="radio" name="mode" value="synth"><div><b>Sintético por bloques</b><br><span>Un mercado nuevo armado con bloques aleatorios de 2 a 6 meses de semanas reales. Mantiene las correlaciones y caídas realistas, y cada partida es irrepetible.</span></div></label>
-    <div class="bar"><button class="btn pri" id="start">Empezar</button><span class="err" id="loaderr"></span></div>
-    <div class="note">Nota: Consumo discrecional y Consumo básico solo existen desde sep-2020 (reclasificación de sectores); en escenarios anteriores juegas con 9 sectores.</div>
-    <div class="note">Arrancas con 100% en efectivo y un año de historia visible para que los indicadores ya tengan contexto. Define tu asignación y avanza.</div>
+    <div style="font-weight:600;margin-bottom:4px">New game</div>
+    <div class="note">Starting capital $100,000 · trading cost 0.1% of the traded amount · cash earns no interest · price indexes (no dividends).</div>
+    <label class="opt"><input type="radio" name="mode" value="blind" checked><div><b>Blind history</b><br><span>A random real period between 2012 and today, with dates hidden. When you finish, the period is revealed.</span></div></label>
+    <label class="opt"><input type="radio" name="mode" value="synth"><div><b>Synthetic blocks</b><br><span>A new market stitched together from random 2–6 month blocks of real weeks. It keeps realistic correlations and drawdowns, and every game is unique.</span></div></label>
+    <div class="bar"><button class="btn pri" id="start">Start</button><span class="err" id="loaderr"></span></div>
+    <div class="note">Note: Consumer Discretionary and Consumer Staples only exist since Sep 2020 (sector reclassification); earlier scenarios use 9 sectors.</div>
+    <div class="note">You start 100% in cash with one year of visible history, so the indicators already have context. Set your allocation and advance.</div>
   </div>
 </section>
 
 <section id="game" class="hide">
   <div class="grid" id="stats"></div>
   <div class="bar">
-    <button class="btn pri" id="adv1">Avanzar 1 semana</button>
-    <button class="btn" id="adv4">Avanzar 4 semanas</button>
-    <button class="btn" id="stop">Parar y ver resultado</button>
+    <button class="btn pri" id="adv1">Advance 1 week</button>
+    <button class="btn" id="adv4">Advance 4 weeks</button>
+    <button class="btn" id="stop">Stop and see results</button>
     <span class="note" id="wk"></span>
   </div>
 
-  <h2>Tu portafolio vs. el mercado</h2>
-  <div class="leg"><span><i class="sw" style="background:#2a78d6"></i>Tu portafolio</span><span><i class="dash" style="border-color:#898781"></i>Mercado (comprar y mantener)</span><span><i class="dash" style="border-color:#eb6834"></i>Tu asignación inicial sin tocar</span></div>
-  <div class="box" style="height:240px"><canvas id="eq" role="img" aria-label="Valor de tu portafolio contra el mercado"></canvas></div>
+  <h2>Your portfolio vs. the market</h2>
+  <div class="leg"><span><i class="sw" style="background:#2a78d6"></i>Your portfolio</span><span><i class="dash" style="border-color:#898781"></i>Market (buy and hold)</span><span><i class="dash" style="border-color:#eb6834"></i>Your initial allocation, untouched</span></div>
+  <div class="box" style="height:240px"><canvas id="eq" role="img" aria-label="Your portfolio value vs. the market"></canvas></div>
 
-  <h2>Decidir esta semana</h2>
-  <p class="hint">Escribe el % objetivo de cada sector; lo que no asignes queda en efectivo. Las operaciones se ejecutan al cierre de esta semana.</p>
+  <h2>Decide this week</h2>
+  <p class="hint">Enter each sector's target %; anything unallocated stays in cash. Trades execute at this week's close.</p>
   <div class="tw"><table>
-    <thead><tr><th>Sector</th><th>Estado</th><th class="hm">vs 200d</th><th class="hm">Fuerza rel.</th><th class="hm">Mom. 8s</th><th>Peso actual</th><th>Objetivo %</th></tr></thead>
+    <thead><tr><th>Sector</th><th>Status</th><th class="hm">vs 200d</th><th class="hm">Rel. strength</th><th class="hm">Mom. 8w</th><th>Current weight</th><th>Target %</th></tr></thead>
     <tbody id="tb"></tbody>
   </table></div>
-  <div class="bar"><button class="btn pri" id="apply">Aplicar cambios</button><button class="btn" id="reset">Deshacer</button><button class="btn" id="mkt">Repartir igual</button><span class="note" id="tradeinfo"></span></div>
+  <div class="bar"><button class="btn pri" id="apply">Apply changes</button><button class="btn" id="reset">Undo</button><button class="btn" id="mkt">Split equally</button><span class="note" id="tradeinfo"></span></div>
 
-  <h2>Mapa de rotación</h2>
-  <p class="hint">Fuerza relativa vs. mercado (horizontal) y su cambio en 8 semanas (vertical). Cola = últimas 6 semanas.</p>
-  <div class="box" style="height:360px"><canvas id="rrg" role="img" aria-label="Mapa de rotación de sectores"></canvas></div>
+  <h2>Rotation map</h2>
+  <p class="hint">Relative strength vs. market (horizontal) and its 8-week change (vertical). Tail = last 6 weeks.</p>
+  <div class="box" style="height:360px"><canvas id="rrg" role="img" aria-label="Sector rotation map"></canvas></div>
 
-  <h2>Mercado y su media de 200 días</h2>
-  <div class="leg"><span><i class="sw" style="background:#2a78d6"></i>Mercado</span><span><i class="dash" style="border-color:#eb6834"></i>Media 40 semanas</span><span id="mstate"></span></div>
-  <div class="box" style="height:200px"><canvas id="mk" role="img" aria-label="Mercado y su media de 40 semanas"></canvas></div>
+  <h2>Market and its 200-day average</h2>
+  <div class="leg"><span><i class="sw" style="background:#2a78d6"></i>Market</span><span><i class="dash" style="border-color:#eb6834"></i>40-week average</span><span id="mstate"></span></div>
+  <div class="box" style="height:200px"><canvas id="mk" role="img" aria-label="Market and its 40-week average"></canvas></div>
 
-  <h2>Tus operaciones</h2>
-  <div class="log" id="log"><div class="note">Aún no has operado.</div></div>
+  <h2>Your trades</h2>
+  <div class="log" id="log"><div class="note">No trades yet.</div></div>
 </section>
 
 <section id="result" class="hide">
-  <h2>Resultado</h2>
+  <h2>Results</h2>
   <div class="grid" id="rstats"></div>
   <div class="card" style="margin-top:12px" id="reveal"></div>
-  <div class="bar"><button class="btn pri" id="again">Nueva partida</button></div>
+  <div class="bar"><button class="btn pri" id="again">New game</button></div>
 </section>
 </main>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <script>
-const SECTORS=["Tecnología","Telecom","Salud","Financieras","Real estate","Consumo discrecional","Consumo básico","Industriales","Materiales","Energía","Utilities"];
+const SECTORS=["Technology","Telecom","Health Care","Financials","Real Estate","Consumer Discretionary","Consumer Staples","Industrials","Materials","Energy","Utilities"];
 let SEC=SECTORS;
-const MKT="Mercado EE.UU.",CAP=100000,COST=0.001,WARM=56,TAIL=6,KEY="simRotacion.v1";
-const QN=["Líder","Debilitándose","Rezagado","Mejorando"],QC=["#0ca30c","#fab219","#d03b3b","#2a78d6"];
+const MKT="US Market",CAP=100000,COST=0.001,WARM=56,TAIL=6,KEY="simRotation.v2";
+const QN=["Leading","Weakening","Lagging","Improving"],QC=["#0ca30c","#fab219","#d03b3b","#2a78d6"];
 const QS=[["var(--okbg)","var(--ok)"],["var(--warnbg)","var(--warn)"],["var(--badbg)","var(--bad)"],["var(--accbg)","var(--acc)"]];
-const EVENTS=[["2011-07-25","2011-10-03","Crisis de deuda europea y rebaja de la calificación de EE.UU."],["2015-08-10","2016-02-12","Devaluación china y desplome del petróleo"],
- ["2018-10-01","2018-12-24","Venta del 4T 2018 (alzas de tasas de la Fed)"],["2020-02-19","2020-03-23","Desplome por COVID-19"],["2020-03-23","2020-08-31","Rebote post-COVID"],
- ["2022-01-03","2022-10-14","Mercado bajista de 2022 (inflación y alzas de tasas)"],["2023-01-02","2023-07-31","Inicio del rally de IA"],["2025-02-19","2025-04-08","Caída por aranceles de 2025"],
- ["2026-06-01","2026-11-30","Corrección de tecnología/IA de 2026"]];
+const EVENTS=[["2011-07-25","2011-10-03","European debt crisis and US credit downgrade"],["2015-08-10","2016-02-12","China devaluation and oil collapse"],
+ ["2018-10-01","2018-12-24","Q4 2018 selloff (Fed rate hikes)"],["2020-02-19","2020-03-23","COVID-19 crash"],["2020-03-23","2020-08-31","Post-COVID rebound"],
+ ["2022-01-03","2022-10-14","2022 bear market (inflation and rate hikes)"],["2023-01-02","2023-07-31","Start of the AI rally"],["2025-02-19","2025-04-08","2025 tariff selloff"],
+ ["2026-06-01","2026-11-30","2026 tech/AI correction"]];
 const dark=matchMedia("(prefers-color-scheme: dark)").matches;
 const grid=dark?"#2c2c2a":"#e1e0d9",tick="#898781",ink=dark?"#c3c2b7":"#52514e";
 const $=id=>document.getElementById(id);
@@ -124,15 +124,15 @@ const load=()=>{try{return JSON.parse(localStorage.getItem(KEY))}catch(e){return
 const drop=()=>{try{localStorage.removeItem(KEY)}catch(e){}};
 let RAW=null,W=null,G=null,charts={};
 
-// ---------- datos reales -> retornos semanales conjuntos
+// ---------- real data -> joint weekly returns
 function prepRaw(D){
   const names=[...SECTORS,MKT],S=D.series;
-  let first=0;while(S[MKT][first]==null||S["Tecnología"][first]==null)first++;
+  let first=0;while(S[MKT][first]==null||S["Technology"][first]==null)first++;
   const labels=D.labels.slice(first),P={};names.forEach(n=>P[n]=S[n].slice(first));
   const R={};names.forEach(n=>{R[n]=[0];for(let i=1;i<labels.length;i++)R[n].push(P[n][i]!=null&&P[n][i-1]!=null?P[n][i]/P[n][i-1]-1:null)});
   return{labels,R,N:labels.length};
 }
-// ---------- construir el "mundo" de la partida
+// ---------- build the game "world"
 function buildWorld(spec){
   const R=RAW.R,idx=[];
   if(spec.mode==="blind"){for(let i=spec.s0-WARM;i<RAW.N;i++)idx.push(i)}
@@ -151,12 +151,12 @@ function newSpec(mode){
   const blocks=[];let n=0;while(n<WARM+520){const l=8+Math.floor(Math.random()*19),s=1+Math.floor(Math.random()*(RAW.N-l-1));blocks.push([s,l]);n+=l}
   return{mode,blocks};
 }
-// ---------- indicadores en la semana t (solo pasado)
+// ---------- indicators at week t (past only)
 const at=(n,t)=>{const a=W.A[n];return{rsr:(a.rs[t]/a.rm[t]-1)*100,mom:(a.rs[t]/a.rs[t-8]-1)*100,now:a.d[t]}};
 const quad=a=>a.rsr>=0?(a.mom>=0?0:1):(a.mom>=0?3:2);
 const p90=(n,t)=>{const s=W.A[n].d.slice(0,t+1).filter(x=>x!=null).sort((a,b)=>a-b);return s[Math.floor(s.length*.9)]};
 
-// ---------- estado de la partida
+// ---------- game state
 function value(g=G){return g.cash+SEC.reduce((s,k)=>s+g.h[k],0)}
 function newGame(mode){
   const spec=newSpec(mode);W=buildWorld(spec);
@@ -175,7 +175,7 @@ function applyTargets(w){
 }
 function advance(n){
   for(let s=0;s<n;s++){
-    if(G.t>=W.T-1){endGame("Se acabó la historia disponible para este escenario.");return}
+    if(G.t>=W.T-1){endGame("No more history is available for this scenario.");return}
     if(!G.bhH){G.bhH={...G.h,cash:G.cash}}
     G.t++;
     SEC.forEach(k=>{G.h[k]*=1+W.ret[k][G.t];G.bhH[k]*=1+W.ret[k][G.t]});
@@ -196,33 +196,33 @@ function buildCharts(){
     {data:[],borderColor:"#2a78d6",borderWidth:2,pointRadius:0,tension:.15},
     {data:[],borderColor:tick,borderDash:[5,4],borderWidth:1.5,pointRadius:0,tension:.15},
     {data:[],borderColor:"#eb6834",borderDash:[3,3],borderWidth:1.5,pointRadius:0,tension:.15}]},
-    options:{...base,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>["Tú: ","Mercado: ","Inicial sin tocar: "][c.datasetIndex]+usd(c.parsed.y)}}},scales:{x:xs,y:{ticks:{color:tick,callback:v=>"$"+Math.round(v/1000)+"k"},grid:{color:grid}}}}});
+    options:{...base,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>["You: ","Market: ","Initial untouched: "][c.datasetIndex]+usd(c.parsed.y)}}},scales:{x:xs,y:{ticks:{color:tick,callback:v=>"$"+Math.round(v/1000)+"k"},grid:{color:grid}}}}});
   charts.mk=new Chart($("mk"),{type:"line",data:{labels:[],datasets:[{data:[],borderColor:"#2a78d6",borderWidth:2,pointRadius:0,tension:.15},{data:[],borderColor:"#eb6834",borderDash:[5,4],borderWidth:2,pointRadius:0}]},
-    options:{...base,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>(c.datasetIndex?"Media: ":"Mercado: ")+c.parsed.y.toFixed(1)}}},scales:{x:xs,y:{ticks:{color:tick},grid:{color:grid}}}}});
-  const qp={id:"q",beforeDraw(c){const{ctx,chartArea:a,scales:{x,y}}=c,x0=x.getPixelForValue(0),y0=y.getPixelForValue(0);ctx.save();ctx.strokeStyle=tick;ctx.beginPath();ctx.moveTo(x0,a.top);ctx.lineTo(x0,a.bottom);ctx.moveTo(a.left,y0);ctx.lineTo(a.right,y0);ctx.stroke();ctx.font="12px sans-serif";ctx.fillStyle=tick;ctx.textAlign="right";ctx.fillText("Líder",a.right-6,a.top+14);ctx.fillText("Debilitándose",a.right-6,a.bottom-6);ctx.textAlign="left";ctx.fillText("Mejorando",a.left+6,a.top+14);ctx.fillText("Rezagado",a.left+6,a.bottom-6);ctx.restore()},
+    options:{...base,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>(c.datasetIndex?"Average: ":"Market: ")+c.parsed.y.toFixed(1)}}},scales:{x:xs,y:{ticks:{color:tick},grid:{color:grid}}}}});
+  const qp={id:"q",beforeDraw(c){const{ctx,chartArea:a,scales:{x,y}}=c,x0=x.getPixelForValue(0),y0=y.getPixelForValue(0);ctx.save();ctx.strokeStyle=tick;ctx.beginPath();ctx.moveTo(x0,a.top);ctx.lineTo(x0,a.bottom);ctx.moveTo(a.left,y0);ctx.lineTo(a.right,y0);ctx.stroke();ctx.font="12px sans-serif";ctx.fillStyle=tick;ctx.textAlign="right";ctx.fillText("Leading",a.right-6,a.top+14);ctx.fillText("Weakening",a.right-6,a.bottom-6);ctx.textAlign="left";ctx.fillText("Improving",a.left+6,a.top+14);ctx.fillText("Lagging",a.left+6,a.bottom-6);ctx.restore()},
     afterDatasetsDraw(c){const{ctx}=c;ctx.save();ctx.font="12px sans-serif";ctx.fillStyle=ink;c.getDatasetMeta(0).data.forEach((p,i)=>{const r=p.x>c.chartArea.right-110;ctx.textAlign=r?"right":"left";ctx.fillText(SEC[i],p.x+(r?-9:9),p.y+4)});ctx.restore()}};
   charts.rrg=new Chart($("rrg"),{type:"scatter",data:{datasets:[{data:[],pointRadius:6,pointBackgroundColor:[],pointBorderColor:dark?"#151515":"#fcfcfb",pointBorderWidth:2,order:0},
       ...SEC.map(()=>({data:[],showLine:true,borderWidth:1.5,pointRadius:2,borderColor:"#888",pointBackgroundColor:"#888",order:1}))]},
-    options:{responsive:true,maintainAspectRatio:false,animation:{duration:0},plugins:{legend:{display:false},tooltip:{filter:i=>i.datasetIndex===0,callbacks:{label:c=>SEC[c.dataIndex]+": fuerza "+sg(c.raw.rx)+", mom. "+sg(c.raw.ry)}}},
-      scales:{x:{title:{display:true,text:"Fuerza relativa vs. mercado",color:tick},ticks:{color:tick,callback:v=>Math.round(v)+"%"},grid:{color:grid}},y:{title:{display:true,text:"Cambio 8 semanas",color:tick},ticks:{color:tick,callback:v=>Math.round(v)+"%"},grid:{color:grid}}}},plugins:[qp]});
+    options:{responsive:true,maintainAspectRatio:false,animation:{duration:0},plugins:{legend:{display:false},tooltip:{filter:i=>i.datasetIndex===0,callbacks:{label:c=>SEC[c.dataIndex]+": strength "+sg(c.raw.rx)+", mom. "+sg(c.raw.ry)}}},
+      scales:{x:{title:{display:true,text:"Relative strength vs. market",color:tick},ticks:{color:tick,callback:v=>Math.round(v)+"%"},grid:{color:grid}},y:{title:{display:true,text:"8-week change",color:tick},ticks:{color:tick,callback:v=>Math.round(v)+"%"},grid:{color:grid}}}},plugins:[qp]});
 }
 function render(){
   const t=G.t,wk=t-WARM,V=value();
   // stats
   const ret=(V/CAP-1)*100,mret=(G.mk.at(-1)/CAP-1)*100,dd=maxDD(G.eq);
   const tile=(l,v,s,c)=>`<div class="tile"><div class="l">${l}</div><div class="v ${c||""}">${v}</div><div class="s">${s}</div></div>`;
-  $("stats").innerHTML=tile("Valor",usd(V),"Efectivo "+usd(G.cash))+tile("Tu rendimiento",sg(ret),"desde el inicio",ret>=0?"pos":"neg")+
-    tile("vs. mercado",sg(ret-mret),"mercado "+sg(mret),ret-mret>=0?"pos":"neg")+tile("Máx. caída",sg(dd),"mercado "+sg(maxDD(G.mk)),dd<-20?"neg":"")+
-    tile("Operaciones",G.trades.length,"costos "+usd(G.costs));
-  $("wk").textContent="Semana "+wk+(W.T-1-t<10?` · quedan ${W.T-1-t} semanas de datos`:"");
+  $("stats").innerHTML=tile("Value",usd(V),"Cash "+usd(G.cash))+tile("Your return",sg(ret),"since start",ret>=0?"pos":"neg")+
+    tile("vs. market",sg(ret-mret),"market "+sg(mret),ret-mret>=0?"pos":"neg")+tile("Max drawdown",sg(dd),"market "+sg(maxDD(G.mk)),dd<-20?"neg":"")+
+    tile("Trades",G.trades.length,"costs "+usd(G.costs));
+  $("wk").textContent="Week "+wk+(W.T-1-t<10?` · ${W.T-1-t} weeks of data left`:"");
   // equity
   const el=G.eq.map((_,i)=>"S"+i);
   charts.eq.data.labels=el;charts.eq.data.datasets[0].data=G.eq;charts.eq.data.datasets[1].data=G.mk;charts.eq.data.datasets[2].data=G.bhH?G.bh:[];charts.eq.update();
-  // mercado visible (último año + partida)
+  // visible market (last year + game)
   const from=Math.max(0,t-104),lab=[];for(let i=from;i<=t;i++)lab.push("S"+(i-WARM));
   const M=W.A[MKT];charts.mk.data.labels=lab;charts.mk.data.datasets[0].data=M.px.slice(from,t+1);charts.mk.data.datasets[1].data=M.m.slice(from,t+1);charts.mk.update();
-  const md=M.d[t];$("mstate").innerHTML=`<b style="color:${md<0?"var(--bad)":md>=15?"var(--warn)":"var(--ok)"}">${md<0?"Debajo de su media":md>=15?"Sobreextendido":"Tendencia sana"} (${sg(md)})</b>`;
-  // rotación
+  const md=M.d[t];$("mstate").innerHTML=`<b style="color:${md<0?"var(--bad)":md>=15?"var(--warn)":"var(--ok)"}">${md<0?"Below its average":md>=15?"Overextended":"Healthy trend"} (${sg(md)})</b>`;
+  // rotation
   const P={};SEC.forEach(k=>P[k]=at(k,t));
   const ax=[],ay=[];for(let s=Math.max(48,t-52);s<=t;s++)SEC.forEach(k=>{const v=at(k,s);ax.push(Math.abs(v.rsr));ay.push(Math.abs(v.mom))});
   const p=a=>a.sort((x,y)=>x-y)[Math.floor(a.length*.97)]||5,xr=Math.ceil(p(ax)*1.15),yr=Math.ceil(p(ay)*1.15),cl=(v,r)=>Math.max(-r,Math.min(r,v));
@@ -230,42 +230,42 @@ function render(){
   r.data.datasets[0].data=SEC.map(k=>({x:cl(P[k].rsr,xr),y:cl(P[k].mom,yr),rx:P[k].rsr,ry:P[k].mom}));r.data.datasets[0].pointBackgroundColor=SEC.map(k=>QC[quad(P[k])]);
   SEC.forEach((k,i)=>{const ds=r.data.datasets[i+1],c=QC[quad(P[k])];ds.borderColor=c+"66";ds.pointBackgroundColor=c+"88";ds.data=[];for(let s=t-TAIL;s<=t;s++){const v=at(k,s);ds.data.push({x:cl(v.rsr,xr),y:cl(v.mom,yr)})}});
   r.update();
-  // tabla de decisiones
+  // decision table
   const ord=SEC.slice().sort((a,b)=>([0,3,1,2].indexOf(quad(P[a]))-[0,3,1,2].indexOf(quad(P[b])))||P[b].rsr-P[a].rsr);
   $("tb").innerHTML=ord.map(k=>{const a=P[k],q=quad(a),ex=a.now>=p90(k,t),w=G.h[k]/V*100;
     return `<tr><td>${k}</td><td><span class="bd" style="background:${QS[q][0]};color:${QS[q][1]}">${QN[q]}</span>${ex?` <span class="bd" style="background:var(--warnbg);color:var(--warn)">Ext.</span>`:""}</td>
     <td class="hm ${a.now<0?"neg":""}">${sg(a.now)}</td><td class="hm">${sg(a.rsr)}</td><td class="hm">${sg(a.mom)}</td><td>${w.toFixed(1)}%</td>
     <td><input type="number" min="0" max="100" step="1" data-k="${k}" value="${Math.round(w*10)/10}"></td></tr>`}).join("")+
-    `<tr><td>Efectivo</td><td></td><td class="hm"></td><td class="hm"></td><td class="hm"></td><td>${(G.cash/V*100).toFixed(1)}%</td><td id="cashT"></td></tr>`;
+    `<tr><td>Cash</td><td></td><td class="hm"></td><td class="hm"></td><td class="hm"></td><td>${(G.cash/V*100).toFixed(1)}%</td><td id="cashT"></td></tr>`;
   document.querySelectorAll("#tb input").forEach(i=>i.oninput=preview);preview();
   // log
-  $("log").innerHTML=G.trades.length?G.trades.slice().reverse().map(tr=>`<div><b>Semana ${tr.wk}</b> · ${tr.chg.map(([k,f,to])=>`${k} ${f.toFixed(0)}→${to.toFixed(0)}%`).join(", ")||"rebalanceo"} · costo ${usd(tr.cost)}</div>`).join(""):`<div class="note">Aún no has operado.</div>`;
+  $("log").innerHTML=G.trades.length?G.trades.slice().reverse().map(tr=>`<div><b>Week ${tr.wk}</b> · ${tr.chg.map(([k,f,to])=>`${k} ${f.toFixed(0)}→${to.toFixed(0)}%`).join(", ")||"rebalance"} · cost ${usd(tr.cost)}</div>`).join(""):`<div class="note">No trades yet.</div>`;
 }
 function readTargets(){const w={};let s=0,bad=false;document.querySelectorAll("#tb input").forEach(i=>{let v=parseFloat(i.value);if(isNaN(v)||v<0){v=0;bad=bad||i.value!==""}w[i.dataset.k]=v;s+=v});return{w,s,bad}}
 function preview(){
   const{w,s,bad}=readTargets(),V=value();let traded=0;SEC.forEach(k=>traded+=Math.abs(V*w[k]/100-G.h[k]));
   $("cashT").textContent=(100-s).toFixed(1)+"%";
   const over=s>100.05;$("apply").disabled=over||bad||traded<V*0.002;
-  $("tradeinfo").innerHTML=over?`<span class="err">Los objetivos suman ${s.toFixed(1)}%; el máximo es 100%.</span>`:bad?`<span class="err">Usa solo números positivos.</span>`:traded<V*0.002?"Sin cambios.":`Negociarías ${usd(traded)} · costo estimado ${usd(traded*COST)}`;
+  $("tradeinfo").innerHTML=over?`<span class="err">Targets add up to ${s.toFixed(1)}%; the maximum is 100%.</span>`:bad?`<span class="err">Use positive numbers only.</span>`:traded<V*0.002?"No changes.":`You would trade ${usd(traded)} · estimated cost ${usd(traded*COST)}`;
 }
 function endGame(why){
   G.done=true;save(G);
   const V=value(),ret=(V/CAP-1)*100,mret=(G.mk.at(-1)/CAP-1)*100,bret=G.bhH?(G.bh.at(-1)/CAP-1)*100:0,wk=G.t-WARM;
   const tile=(l,v,s,c)=>`<div class="tile"><div class="l">${l}</div><div class="v ${c||""}">${v}</div><div class="s">${s}</div></div>`;
-  $("rstats").innerHTML=tile("Tu rendimiento",sg(ret),usd(V),ret>=0?"pos":"neg")+tile("Mercado",sg(mret),"comprar y mantener")+tile("Tu inicial sin tocar",sg(bret),"si no hubieras operado")+
-    tile("vs. mercado",sg(ret-mret),wk+" semanas",ret-mret>=0?"pos":"neg")+tile("Tu máx. caída",sg(maxDD(G.eq)),"mercado "+sg(maxDD(G.mk)))+tile("Operaciones",G.trades.length,"costos "+usd(G.costs));
+  $("rstats").innerHTML=tile("Your return",sg(ret),usd(V),ret>=0?"pos":"neg")+tile("Market",sg(mret),"buy and hold")+tile("Your initial, untouched",sg(bret),"if you had not traded")+
+    tile("vs. market",sg(ret-mret),wk+" weeks",ret-mret>=0?"pos":"neg")+tile("Your max drawdown",sg(maxDD(G.eq)),"market "+sg(maxDD(G.mk)))+tile("Trades",G.trades.length,"costs "+usd(G.costs));
   const L=RAW.labels,s=G.spec;let html=why?`<p class="note">${why}</p>`:"";
-  if(s.mode==="blind"){const a=L[s.s0],b=L[s.s0+wk];const ev=EVENTS.filter(([x,y])=>x<=b&&y>=a).map(e=>`<li>${e[2]} (${e[0].slice(0,7)} a ${e[1].slice(0,7)})</li>`).join("");
-    html+=`<div style="font-weight:600">El periodo real era: ${a} a ${b}</div>`+(ev?`<div class="note" style="margin-top:6px">Episodios dentro de tu partida:</div><ul class="note" style="margin:4px 0 0 18px;padding:0">${ev}</ul>`:`<div class="note">Sin episodios destacados en ese tramo.</div>`);}
-  else{let n=0;const used=[];for(const[b0,l]of s.blocks){if(n+l>WARM&&n<=G.t)used.push(`${L[b0].slice(0,7)} (${l} sem.)`);n+=l}
-    html+=`<div style="font-weight:600">Escenario sintético</div><div class="note">Se armó con ${used.length} bloques de semanas reales: ${used.join(", ")}.</div>`;}
-  html+=`<div class="note" style="margin-top:10px">Pregunta para revisar: ¿tus operaciones siguieron las reglas (sobreextensión, ruptura de la media, rotación) o fueron reacciones? Revisa la lista de operaciones arriba.</div>`;
+  if(s.mode==="blind"){const a=L[s.s0],b=L[s.s0+wk];const ev=EVENTS.filter(([x,y])=>x<=b&&y>=a).map(e=>`<li>${e[2]} (${e[0].slice(0,7)} to ${e[1].slice(0,7)})</li>`).join("");
+    html+=`<div style="font-weight:600">The real period was: ${a} to ${b}</div>`+(ev?`<div class="note" style="margin-top:6px">Episodes during your game:</div><ul class="note" style="margin:4px 0 0 18px;padding:0">${ev}</ul>`:`<div class="note">No notable episodes in that stretch.</div>`);}
+  else{let n=0;const used=[];for(const[b0,l]of s.blocks){if(n+l>WARM&&n<=G.t)used.push(`${L[b0].slice(0,7)} (${l} wks)`);n+=l}
+    html+=`<div style="font-weight:600">Synthetic scenario</div><div class="note">Built from ${used.length} blocks of real weeks: ${used.join(", ")}.</div>`;}
+  html+=`<div class="note" style="margin-top:10px">Question to review: did your trades follow the rules (overextension, break of the average, rotation), or were they reactions? Check your trade list above.</div>`;
   $("reveal").innerHTML=html;$("result").classList.remove("hide");
   ["adv1","adv4","stop","apply"].forEach(id=>$(id).disabled=true);
   $("result").scrollIntoView({behavior:"smooth"});
 }
 
-// ---------- eventos
+// ---------- events
 $("start").onclick=()=>{const m=document.querySelector("input[name=mode]:checked").value;newGame(m)};
 $("adv1").onclick=()=>advance(1);
 $("adv4").onclick=()=>advance(4);
@@ -279,7 +279,7 @@ fetch("sim.json?t="+Date.now()).then(r=>{if(!r.ok)throw new Error(r.status);retu
   RAW=prepRaw(D);
   const s=load();
   if(s&&s.spec&&!s.done){G=s;W=buildWorld(G.spec);startUI()}
-}).catch(e=>{$("loaderr").textContent="No se pudieron cargar los datos ("+e.message+").";$("start").disabled=true});
+}).catch(e=>{$("loaderr").textContent="Could not load data ("+e.message+").";$("start").disabled=true});
 </script>
 </body>
 </html>
