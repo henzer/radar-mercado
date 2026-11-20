@@ -1,0 +1,283 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Simulador de Rotación</title>
+<style>
+:root{--bg:#fcfcfb;--card:#f3f2ee;--ink:#0b0b0b;--ink2:#52514e;--muted:#898781;--line:#e1e0d9;--border:rgba(11,11,11,.12);
+--ok:#0a7d0a;--okbg:#e6f4e6;--warn:#8a5a00;--warnbg:#fdf1d6;--bad:#b02a2a;--badbg:#fbe7e7;--acc:#1f5fb0;--accbg:#e4eefa;}
+@media (prefers-color-scheme:dark){:root{--bg:#151515;--card:#1f1f1e;--ink:#f0efec;--ink2:#c3c2b7;--muted:#898781;--line:#2c2c2a;--border:rgba(255,255,255,.14);
+--ok:#5fd35f;--okbg:#173317;--warn:#f2c14e;--warnbg:#3a2e10;--bad:#f08a8a;--badbg:#3b1a1a;--acc:#8ab8f0;--accbg:#16263b;}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;}
+main{max-width:980px;margin:0 auto;padding:24px 16px 48px;}
+a{color:var(--acc)}
+h1{font-size:22px;font-weight:600;margin:0}
+h2{font-size:16px;font-weight:600;margin:28px 0 6px}
+.sub{color:var(--muted);font-size:13px;margin:2px 0 16px}
+.hint{color:var(--ink2);font-size:13px;margin:0 0 10px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px}
+.tile{background:var(--card);border-radius:10px;padding:10px 14px}
+.tile .l{font-size:12px;color:var(--ink2)}.tile .v{font-size:22px;font-weight:600;font-variant-numeric:tabular-nums}.tile .s{font-size:12px;color:var(--muted)}
+.btn{font:inherit;font-size:14px;padding:7px 14px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--ink);cursor:pointer}
+.btn:hover{background:var(--card)}.btn.pri{background:var(--acc);border-color:var(--acc);color:var(--bg)}.btn:disabled{opacity:.45;cursor:default}
+.bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:12px 0}
+.card{background:var(--card);border-radius:12px;padding:16px}
+.opt{display:flex;gap:10px;align-items:flex-start;padding:10px;border:1px solid var(--border);border-radius:10px;margin:8px 0;cursor:pointer}
+.opt input{margin-top:5px}.opt b{font-weight:600}.opt span{color:var(--ink2);font-size:13px}
+.box{position:relative;width:100%}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{font-weight:500;color:var(--muted);font-size:12px;text-align:right;padding:6px 4px;border-bottom:1px solid var(--line)}
+th:first-child,td:first-child{text-align:left}
+td{padding:6px 4px;border-bottom:1px solid var(--line);text-align:right;font-variant-numeric:tabular-nums}
+td input{width:62px;font:inherit;text-align:right;padding:3px 6px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--ink)}
+.bd{font-size:11px;padding:1px 7px;border-radius:6px;display:inline-block;white-space:nowrap}
+.pos{color:var(--ok)}.neg{color:var(--bad)}
+.note{font-size:13px;color:var(--ink2)}
+.err{color:var(--bad);font-size:13px}
+.log{font-size:13px;max-height:220px;overflow:auto}
+.log div{padding:4px 0;border-bottom:1px solid var(--line)}
+.leg{display:flex;flex-wrap:wrap;gap:14px;font-size:12px;color:var(--ink2);margin:0 0 6px}
+.leg span{display:flex;align-items:center;gap:5px}.sw{width:10px;height:10px;border-radius:2px}.dash{width:14px;border-top:2px dashed}
+.hide{display:none}
+.tw{overflow-x:auto}
+@media (max-width:640px){.hm{display:none}}
+</style>
+</head>
+<body>
+<main>
+<h1>Simulador de rotación sectorial</h1>
+<div class="sub"><a href="./">← Volver al radar</a> · Entrena tu proceso: decide semana a semana con el mismo motor del dashboard.</div>
+
+<section id="setup">
+  <div class="card">
+    <div style="font-weight:600;margin-bottom:4px">Nueva partida</div>
+    <div class="note">Capital inicial $100,000 · costo por operación 0.1% del monto negociado · el efectivo no rinde intereses · índices de precio (sin dividendos).</div>
+    <label class="opt"><input type="radio" name="mode" value="blind" checked><div><b>Histórico a ciegas</b><br><span>Un periodo real al azar entre 2012 y hoy, sin fechas. Al terminar te revelo qué periodo era.</span></div></label>
+    <label class="opt"><input type="radio" name="mode" value="synth"><div><b>Sintético por bloques</b><br><span>Un mercado nuevo armado con bloques aleatorios de 2 a 6 meses de semanas reales. Mantiene las correlaciones y caídas realistas, y cada partida es irrepetible.</span></div></label>
+    <div class="bar"><button class="btn pri" id="start">Empezar</button><span class="err" id="loaderr"></span></div>
+    <div class="note">Arrancas con 100% en efectivo y un año de historia visible para que los indicadores ya tengan contexto. Define tu asignación y avanza.</div>
+  </div>
+</section>
+
+<section id="game" class="hide">
+  <div class="grid" id="stats"></div>
+  <div class="bar">
+    <button class="btn pri" id="adv1">Avanzar 1 semana</button>
+    <button class="btn" id="adv4">Avanzar 4 semanas</button>
+    <button class="btn" id="stop">Parar y ver resultado</button>
+    <span class="note" id="wk"></span>
+  </div>
+
+  <h2>Tu portafolio vs. el mercado</h2>
+  <div class="leg"><span><i class="sw" style="background:#2a78d6"></i>Tu portafolio</span><span><i class="dash" style="border-color:#898781"></i>Mercado (comprar y mantener)</span><span><i class="dash" style="border-color:#eb6834"></i>Tu asignación inicial sin tocar</span></div>
+  <div class="box" style="height:240px"><canvas id="eq" role="img" aria-label="Valor de tu portafolio contra el mercado"></canvas></div>
+
+  <h2>Decidir esta semana</h2>
+  <p class="hint">Escribe el % objetivo de cada sector; lo que no asignes queda en efectivo. Las operaciones se ejecutan al cierre de esta semana.</p>
+  <div class="tw"><table>
+    <thead><tr><th>Sector</th><th>Estado</th><th class="hm">vs 200d</th><th class="hm">Fuerza rel.</th><th class="hm">Mom. 8s</th><th>Peso actual</th><th>Objetivo %</th></tr></thead>
+    <tbody id="tb"></tbody>
+  </table></div>
+  <div class="bar"><button class="btn pri" id="apply">Aplicar cambios</button><button class="btn" id="reset">Deshacer</button><button class="btn" id="mkt">Repartir igual (11 sectores)</button><span class="note" id="tradeinfo"></span></div>
+
+  <h2>Mapa de rotación</h2>
+  <p class="hint">Fuerza relativa vs. mercado (horizontal) y su cambio en 8 semanas (vertical). Cola = últimas 6 semanas.</p>
+  <div class="box" style="height:360px"><canvas id="rrg" role="img" aria-label="Mapa de rotación de sectores"></canvas></div>
+
+  <h2>Mercado y su media de 200 días</h2>
+  <div class="leg"><span><i class="sw" style="background:#2a78d6"></i>Mercado</span><span><i class="dash" style="border-color:#eb6834"></i>Media 40 semanas</span><span id="mstate"></span></div>
+  <div class="box" style="height:200px"><canvas id="mk" role="img" aria-label="Mercado y su media de 40 semanas"></canvas></div>
+
+  <h2>Tus operaciones</h2>
+  <div class="log" id="log"><div class="note">Aún no has operado.</div></div>
+</section>
+
+<section id="result" class="hide">
+  <h2>Resultado</h2>
+  <div class="grid" id="rstats"></div>
+  <div class="card" style="margin-top:12px" id="reveal"></div>
+  <div class="bar"><button class="btn pri" id="again">Nueva partida</button></div>
+</section>
+</main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>
+const SECTORS=["Tecnología","Telecom","Salud","Financieras","Real estate","Consumo discrecional","Consumo básico","Industriales","Materiales","Energía","Utilities"];
+const MKT="Mercado EE.UU.",CAP=100000,COST=0.001,WARM=56,TAIL=6,KEY="simRotacion.v1";
+const QN=["Líder","Debilitándose","Rezagado","Mejorando"],QC=["#0ca30c","#fab219","#d03b3b","#2a78d6"];
+const QS=[["var(--okbg)","var(--ok)"],["var(--warnbg)","var(--warn)"],["var(--badbg)","var(--bad)"],["var(--accbg)","var(--acc)"]];
+const EVENTS=[["2011-07-25","2011-10-03","Crisis de deuda europea y rebaja de la calificación de EE.UU."],["2015-08-10","2016-02-12","Devaluación china y desplome del petróleo"],
+ ["2018-10-01","2018-12-24","Venta del 4T 2018 (alzas de tasas de la Fed)"],["2020-02-19","2020-03-23","Desplome por COVID-19"],["2020-03-23","2020-08-31","Rebote post-COVID"],
+ ["2022-01-03","2022-10-14","Mercado bajista de 2022 (inflación y alzas de tasas)"],["2023-01-02","2023-07-31","Inicio del rally de IA"],["2025-02-19","2025-04-08","Caída por aranceles de 2025"],
+ ["2026-06-01","2026-11-30","Corrección de tecnología/IA de 2026"]];
+const dark=matchMedia("(prefers-color-scheme: dark)").matches;
+const grid=dark?"#2c2c2a":"#e1e0d9",tick="#898781",ink=dark?"#c3c2b7":"#52514e";
+const $=id=>document.getElementById(id);
+const sg=v=>v==null||isNaN(v)?"–":(v>0?"+":"")+v.toFixed(1)+"%";
+const usd=v=>"$"+Math.round(v).toLocaleString("en-US");
+const save=s=>{try{localStorage.setItem(KEY,JSON.stringify(s))}catch(e){}};
+const load=()=>{try{return JSON.parse(localStorage.getItem(KEY))}catch(e){return null}};
+const drop=()=>{try{localStorage.removeItem(KEY)}catch(e){}};
+let RAW=null,W=null,G=null,charts={};
+
+// ---------- datos reales -> retornos semanales conjuntos
+function prepRaw(D){
+  const names=[...SECTORS,MKT],S=D.series;
+  let first=0;while(names.some(n=>S[n][first]==null))first++;
+  const labels=D.labels.slice(first),P={};names.forEach(n=>P[n]=S[n].slice(first));
+  const R={};names.forEach(n=>{R[n]=[0];for(let i=1;i<labels.length;i++)R[n].push(P[n][i]/P[n][i-1]-1)});
+  return{labels,R,N:labels.length};
+}
+// ---------- construir el "mundo" de la partida
+function buildWorld(spec){
+  const R=RAW.R,idx=[];
+  if(spec.mode==="blind"){for(let i=spec.s0-WARM;i<RAW.N;i++)idx.push(i)}
+  else spec.blocks.forEach(([s,l])=>{for(let i=s;i<s+l;i++)idx.push(i)});
+  const names=[...SECTORS,MKT],P={};
+  names.forEach(n=>{let v=100;P[n]=idx.map((i,j)=>j===0?v:(v*=1+R[n][i]))});
+  const ret={};names.forEach(n=>ret[n]=idx.map(i=>R[n][i]));
+  const w={idx,P,ret,T:idx.length,A:{}};
+  const ma=(a,n)=>a.map((_,i)=>{if(i<n-1)return null;let s=0;for(let j=i-n+1;j<=i;j++)s+=a[j];return s/n});
+  names.forEach(n=>{const px=P[n],m=ma(px,40),d=px.map((v,i)=>m[i]?(v/m[i]-1)*100:null);
+    const rs=px.map((v,i)=>v/P[MKT][i]*100),rm=ma(rs,40);w.A[n]={px,m,d,rs,rm}});
+  return w;
+}
+function newSpec(mode){
+  if(mode==="blind"){const lo=WARM+1,hi=RAW.N-53;return{mode,s0:lo+Math.floor(Math.random()*(hi-lo))}}
+  const blocks=[];let n=0;while(n<WARM+520){const l=8+Math.floor(Math.random()*19),s=1+Math.floor(Math.random()*(RAW.N-l-1));blocks.push([s,l]);n+=l}
+  return{mode,blocks};
+}
+// ---------- indicadores en la semana t (solo pasado)
+const at=(n,t)=>{const a=W.A[n];return{rsr:(a.rs[t]/a.rm[t]-1)*100,mom:(a.rs[t]/a.rs[t-8]-1)*100,now:a.d[t]}};
+const quad=a=>a.rsr>=0?(a.mom>=0?0:1):(a.mom>=0?3:2);
+const p90=(n,t)=>{const s=W.A[n].d.slice(0,t+1).filter(x=>x!=null).sort((a,b)=>a-b);return s[Math.floor(s.length*.9)]};
+
+// ---------- estado de la partida
+function value(g=G){return g.cash+SECTORS.reduce((s,k)=>s+g.h[k],0)}
+function newGame(mode){
+  const spec=newSpec(mode);W=buildWorld(spec);
+  G={spec,t:WARM,cash:CAP,h:Object.fromEntries(SECTORS.map(k=>[k,0])),eq:[CAP],mk:[CAP],bh:[CAP],bhH:null,trades:[],costs:0,done:false};
+  save(G);startUI();
+}
+function applyTargets(w){
+  const V=value(),tgt={};let traded=0,sum=0;
+  SECTORS.forEach(k=>{tgt[k]=V*w[k]/100;traded+=Math.abs(tgt[k]-G.h[k]);sum+=w[k]});
+  if(traded<1)return null;
+  const cost=traded*COST,Vn=V-cost,chg=[];
+  SECTORS.forEach(k=>{const from=G.h[k]/V*100,to=w[k];if(Math.abs(to-from)>=0.05)chg.push([k,from,to]);G.h[k]=Vn*w[k]/100});
+  G.cash=Vn*(100-sum)/100;G.costs+=cost;
+  G.trades.push({wk:G.t-WARM,chg,cost});
+  return cost;
+}
+function advance(n){
+  for(let s=0;s<n;s++){
+    if(G.t>=W.T-1){endGame("Se acabó la historia disponible para este escenario.");return}
+    if(!G.bhH){G.bhH={...G.h,cash:G.cash}}
+    G.t++;
+    SECTORS.forEach(k=>{G.h[k]*=1+W.ret[k][G.t];G.bhH[k]*=1+W.ret[k][G.t]});
+    G.eq.push(value());G.mk.push(G.mk[G.mk.length-1]*(1+W.ret[MKT][G.t]));
+    G.bh.push(G.bhH.cash+SECTORS.reduce((s,k)=>s+G.bhH[k],0));
+  }
+  save(G);render();
+}
+const maxDD=a=>{let pk=a[0],m=0;for(const v of a){pk=Math.max(pk,v);m=Math.min(m,v/pk-1)}return m*100};
+
+// ---------- UI
+function startUI(){$("setup").classList.add("hide");$("result").classList.add("hide");$("game").classList.remove("hide");buildCharts();render()}
+function buildCharts(){
+  Object.values(charts).forEach(c=>c.destroy());charts={};
+  const base={responsive:true,maintainAspectRatio:false,animation:{duration:0},interaction:{mode:"index",intersect:false},plugins:{legend:{display:false}}};
+  const xs={ticks:{color:tick,maxTicksLimit:8},grid:{display:false}};
+  charts.eq=new Chart($("eq"),{type:"line",data:{labels:[],datasets:[
+    {data:[],borderColor:"#2a78d6",borderWidth:2,pointRadius:0,tension:.15},
+    {data:[],borderColor:tick,borderDash:[5,4],borderWidth:1.5,pointRadius:0,tension:.15},
+    {data:[],borderColor:"#eb6834",borderDash:[3,3],borderWidth:1.5,pointRadius:0,tension:.15}]},
+    options:{...base,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>["Tú: ","Mercado: ","Inicial sin tocar: "][c.datasetIndex]+usd(c.parsed.y)}}},scales:{x:xs,y:{ticks:{color:tick,callback:v=>"$"+Math.round(v/1000)+"k"},grid:{color:grid}}}}});
+  charts.mk=new Chart($("mk"),{type:"line",data:{labels:[],datasets:[{data:[],borderColor:"#2a78d6",borderWidth:2,pointRadius:0,tension:.15},{data:[],borderColor:"#eb6834",borderDash:[5,4],borderWidth:2,pointRadius:0}]},
+    options:{...base,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>(c.datasetIndex?"Media: ":"Mercado: ")+c.parsed.y.toFixed(1)}}},scales:{x:xs,y:{ticks:{color:tick},grid:{color:grid}}}}});
+  const qp={id:"q",beforeDraw(c){const{ctx,chartArea:a,scales:{x,y}}=c,x0=x.getPixelForValue(0),y0=y.getPixelForValue(0);ctx.save();ctx.strokeStyle=tick;ctx.beginPath();ctx.moveTo(x0,a.top);ctx.lineTo(x0,a.bottom);ctx.moveTo(a.left,y0);ctx.lineTo(a.right,y0);ctx.stroke();ctx.font="12px sans-serif";ctx.fillStyle=tick;ctx.textAlign="right";ctx.fillText("Líder",a.right-6,a.top+14);ctx.fillText("Debilitándose",a.right-6,a.bottom-6);ctx.textAlign="left";ctx.fillText("Mejorando",a.left+6,a.top+14);ctx.fillText("Rezagado",a.left+6,a.bottom-6);ctx.restore()},
+    afterDatasetsDraw(c){const{ctx}=c;ctx.save();ctx.font="12px sans-serif";ctx.fillStyle=ink;c.getDatasetMeta(0).data.forEach((p,i)=>{const r=p.x>c.chartArea.right-110;ctx.textAlign=r?"right":"left";ctx.fillText(SECTORS[i],p.x+(r?-9:9),p.y+4)});ctx.restore()}};
+  charts.rrg=new Chart($("rrg"),{type:"scatter",data:{datasets:[{data:[],pointRadius:6,pointBackgroundColor:[],pointBorderColor:dark?"#151515":"#fcfcfb",pointBorderWidth:2,order:0},
+      ...SECTORS.map(()=>({data:[],showLine:true,borderWidth:1.5,pointRadius:2,borderColor:"#888",pointBackgroundColor:"#888",order:1}))]},
+    options:{responsive:true,maintainAspectRatio:false,animation:{duration:0},plugins:{legend:{display:false},tooltip:{filter:i=>i.datasetIndex===0,callbacks:{label:c=>SECTORS[c.dataIndex]+": fuerza "+sg(c.raw.rx)+", mom. "+sg(c.raw.ry)}}},
+      scales:{x:{title:{display:true,text:"Fuerza relativa vs. mercado",color:tick},ticks:{color:tick,callback:v=>Math.round(v)+"%"},grid:{color:grid}},y:{title:{display:true,text:"Cambio 8 semanas",color:tick},ticks:{color:tick,callback:v=>Math.round(v)+"%"},grid:{color:grid}}}},plugins:[qp]});
+}
+function render(){
+  const t=G.t,wk=t-WARM,V=value();
+  // stats
+  const ret=(V/CAP-1)*100,mret=(G.mk.at(-1)/CAP-1)*100,dd=maxDD(G.eq);
+  const tile=(l,v,s,c)=>`<div class="tile"><div class="l">${l}</div><div class="v ${c||""}">${v}</div><div class="s">${s}</div></div>`;
+  $("stats").innerHTML=tile("Valor",usd(V),"Efectivo "+usd(G.cash))+tile("Tu rendimiento",sg(ret),"desde el inicio",ret>=0?"pos":"neg")+
+    tile("vs. mercado",sg(ret-mret),"mercado "+sg(mret),ret-mret>=0?"pos":"neg")+tile("Máx. caída",sg(dd),"mercado "+sg(maxDD(G.mk)),dd<-20?"neg":"")+
+    tile("Operaciones",G.trades.length,"costos "+usd(G.costs));
+  $("wk").textContent="Semana "+wk+(W.T-1-t<10?` · quedan ${W.T-1-t} semanas de datos`:"");
+  // equity
+  const el=G.eq.map((_,i)=>"S"+i);
+  charts.eq.data.labels=el;charts.eq.data.datasets[0].data=G.eq;charts.eq.data.datasets[1].data=G.mk;charts.eq.data.datasets[2].data=G.bhH?G.bh:[];charts.eq.update();
+  // mercado visible (último año + partida)
+  const from=Math.max(0,t-104),lab=[];for(let i=from;i<=t;i++)lab.push("S"+(i-WARM));
+  const M=W.A[MKT];charts.mk.data.labels=lab;charts.mk.data.datasets[0].data=M.px.slice(from,t+1);charts.mk.data.datasets[1].data=M.m.slice(from,t+1);charts.mk.update();
+  const md=M.d[t];$("mstate").innerHTML=`<b style="color:${md<0?"var(--bad)":md>=15?"var(--warn)":"var(--ok)"}">${md<0?"Debajo de su media":md>=15?"Sobreextendido":"Tendencia sana"} (${sg(md)})</b>`;
+  // rotación
+  const P={};SECTORS.forEach(k=>P[k]=at(k,t));
+  const ax=[],ay=[];for(let s=Math.max(48,t-52);s<=t;s++)SECTORS.forEach(k=>{const v=at(k,s);ax.push(Math.abs(v.rsr));ay.push(Math.abs(v.mom))});
+  const p=a=>a.sort((x,y)=>x-y)[Math.floor(a.length*.97)]||5,xr=Math.ceil(p(ax)*1.15),yr=Math.ceil(p(ay)*1.15),cl=(v,r)=>Math.max(-r,Math.min(r,v));
+  const r=charts.rrg;r.options.scales.x.min=-xr;r.options.scales.x.max=xr;r.options.scales.y.min=-yr;r.options.scales.y.max=yr;
+  r.data.datasets[0].data=SECTORS.map(k=>({x:cl(P[k].rsr,xr),y:cl(P[k].mom,yr),rx:P[k].rsr,ry:P[k].mom}));r.data.datasets[0].pointBackgroundColor=SECTORS.map(k=>QC[quad(P[k])]);
+  SECTORS.forEach((k,i)=>{const ds=r.data.datasets[i+1],c=QC[quad(P[k])];ds.borderColor=c+"66";ds.pointBackgroundColor=c+"88";ds.data=[];for(let s=t-TAIL;s<=t;s++){const v=at(k,s);ds.data.push({x:cl(v.rsr,xr),y:cl(v.mom,yr)})}});
+  r.update();
+  // tabla de decisiones
+  const ord=SECTORS.slice().sort((a,b)=>([0,3,1,2].indexOf(quad(P[a]))-[0,3,1,2].indexOf(quad(P[b])))||P[b].rsr-P[a].rsr);
+  $("tb").innerHTML=ord.map(k=>{const a=P[k],q=quad(a),ex=a.now>=p90(k,t),w=G.h[k]/V*100;
+    return `<tr><td>${k}</td><td><span class="bd" style="background:${QS[q][0]};color:${QS[q][1]}">${QN[q]}</span>${ex?` <span class="bd" style="background:var(--warnbg);color:var(--warn)">Ext.</span>`:""}</td>
+    <td class="hm ${a.now<0?"neg":""}">${sg(a.now)}</td><td class="hm">${sg(a.rsr)}</td><td class="hm">${sg(a.mom)}</td><td>${w.toFixed(1)}%</td>
+    <td><input type="number" min="0" max="100" step="1" data-k="${k}" value="${Math.round(w*10)/10}"></td></tr>`}).join("")+
+    `<tr><td>Efectivo</td><td></td><td class="hm"></td><td class="hm"></td><td class="hm"></td><td>${(G.cash/V*100).toFixed(1)}%</td><td id="cashT"></td></tr>`;
+  document.querySelectorAll("#tb input").forEach(i=>i.oninput=preview);preview();
+  // log
+  $("log").innerHTML=G.trades.length?G.trades.slice().reverse().map(tr=>`<div><b>Semana ${tr.wk}</b> · ${tr.chg.map(([k,f,to])=>`${k} ${f.toFixed(0)}→${to.toFixed(0)}%`).join(", ")||"rebalanceo"} · costo ${usd(tr.cost)}</div>`).join(""):`<div class="note">Aún no has operado.</div>`;
+}
+function readTargets(){const w={};let s=0,bad=false;document.querySelectorAll("#tb input").forEach(i=>{let v=parseFloat(i.value);if(isNaN(v)||v<0){v=0;bad=bad||i.value!==""}w[i.dataset.k]=v;s+=v});return{w,s,bad}}
+function preview(){
+  const{w,s,bad}=readTargets(),V=value();let traded=0;SECTORS.forEach(k=>traded+=Math.abs(V*w[k]/100-G.h[k]));
+  $("cashT").textContent=(100-s).toFixed(1)+"%";
+  const over=s>100.05;$("apply").disabled=over||bad||traded<1;
+  $("tradeinfo").innerHTML=over?`<span class="err">Los objetivos suman ${s.toFixed(1)}%; el máximo es 100%.</span>`:bad?`<span class="err">Usa solo números positivos.</span>`:traded<1?"Sin cambios.":`Negociarías ${usd(traded)} · costo estimado ${usd(traded*COST)}`;
+}
+function endGame(why){
+  G.done=true;save(G);
+  const V=value(),ret=(V/CAP-1)*100,mret=(G.mk.at(-1)/CAP-1)*100,bret=G.bhH?(G.bh.at(-1)/CAP-1)*100:0,wk=G.t-WARM;
+  const tile=(l,v,s,c)=>`<div class="tile"><div class="l">${l}</div><div class="v ${c||""}">${v}</div><div class="s">${s}</div></div>`;
+  $("rstats").innerHTML=tile("Tu rendimiento",sg(ret),usd(V),ret>=0?"pos":"neg")+tile("Mercado",sg(mret),"comprar y mantener")+tile("Tu inicial sin tocar",sg(bret),"si no hubieras operado")+
+    tile("vs. mercado",sg(ret-mret),wk+" semanas",ret-mret>=0?"pos":"neg")+tile("Tu máx. caída",sg(maxDD(G.eq)),"mercado "+sg(maxDD(G.mk)))+tile("Operaciones",G.trades.length,"costos "+usd(G.costs));
+  const L=RAW.labels,s=G.spec;let html=why?`<p class="note">${why}</p>`:"";
+  if(s.mode==="blind"){const a=L[s.s0],b=L[s.s0+wk];const ev=EVENTS.filter(([x,y])=>x<=b&&y>=a).map(e=>`<li>${e[2]} (${e[0].slice(0,7)} a ${e[1].slice(0,7)})</li>`).join("");
+    html+=`<div style="font-weight:600">El periodo real era: ${a} a ${b}</div>`+(ev?`<div class="note" style="margin-top:6px">Episodios dentro de tu partida:</div><ul class="note" style="margin:4px 0 0 18px;padding:0">${ev}</ul>`:`<div class="note">Sin episodios destacados en ese tramo.</div>`);}
+  else{let n=0;const used=[];for(const[b0,l]of s.blocks){if(n+l>WARM&&n<=G.t)used.push(`${L[b0].slice(0,7)} (${l} sem.)`);n+=l}
+    html+=`<div style="font-weight:600">Escenario sintético</div><div class="note">Se armó con ${used.length} bloques de semanas reales: ${used.join(", ")}.</div>`;}
+  html+=`<div class="note" style="margin-top:10px">Pregunta para revisar: ¿tus operaciones siguieron las reglas (sobreextensión, ruptura de la media, rotación) o fueron reacciones? Revisa la lista de operaciones arriba.</div>`;
+  $("reveal").innerHTML=html;$("result").classList.remove("hide");
+  ["adv1","adv4","stop","apply"].forEach(id=>$(id).disabled=true);
+  $("result").scrollIntoView({behavior:"smooth"});
+}
+
+// ---------- eventos
+$("start").onclick=()=>{const m=document.querySelector("input[name=mode]:checked").value;newGame(m)};
+$("adv1").onclick=()=>advance(1);
+$("adv4").onclick=()=>advance(4);
+$("stop").onclick=()=>endGame();
+$("apply").onclick=()=>{const{w,s,bad}=readTargets();if(s>100.05||bad)return;const c=applyTargets(w);if(c!=null){save(G);render()}};
+$("reset").onclick=()=>render();
+$("mkt").onclick=()=>{document.querySelectorAll("#tb input").forEach(i=>{i.value=(100/SECTORS.length).toFixed(1)});preview()};
+$("again").onclick=()=>{drop();G=null;["adv1","adv4","stop"].forEach(id=>$(id).disabled=false);$("game").classList.add("hide");$("result").classList.add("hide");$("setup").classList.remove("hide");window.scrollTo(0,0)};
+
+fetch("sim.json?t="+Date.now()).then(r=>{if(!r.ok)throw new Error(r.status);return r.json()}).then(D=>{
+  RAW=prepRaw(D);
+  const s=load();
+  if(s&&s.spec&&!s.done){G=s;W=buildWorld(G.spec);startUI()}
+}).catch(e=>{$("loaderr").textContent="No se pudieron cargar los datos ("+e.message+").";$("start").disabled=true});
+</script>
+</body>
+</html>
