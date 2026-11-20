@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Radar de Mercado</title>
+<style>
+:root{--bg:#fcfcfb;--card:#f3f2ee;--ink:#0b0b0b;--ink2:#52514e;--muted:#898781;--line:#e1e0d9;--border:rgba(11,11,11,.10);
+--ok:#0a7d0a;--okbg:#e6f4e6;--warn:#8a5a00;--warnbg:#fdf1d6;--bad:#b02a2a;--badbg:#fbe7e7;--acc:#1f5fb0;--accbg:#e4eefa;}
+@media (prefers-color-scheme:dark){:root{--bg:#151515;--card:#1f1f1e;--ink:#f0efec;--ink2:#c3c2b7;--muted:#898781;--line:#2c2c2a;--border:rgba(255,255,255,.10);
+--ok:#5fd35f;--okbg:#173317;--warn:#f2c14e;--warnbg:#3a2e10;--bad:#f08a8a;--badbg:#3b1a1a;--acc:#8ab8f0;--accbg:#16263b;}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;}
+main{max-width:980px;margin:0 auto;padding:24px 16px 48px;}
+h1{font-size:22px;font-weight:600;margin:0}
+h2{font-size:16px;font-weight:600;margin:32px 0 4px}
+.sub{color:var(--muted);font-size:13px;margin:2px 0 16px}
+.hint{color:var(--ink2);font-size:13px;margin:0 0 10px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
+.tile{background:var(--card);border-radius:10px;padding:12px 14px}
+.tile .l{font-size:12px;color:var(--ink2)}.tile .v{font-size:24px;font-weight:600;font-variant-numeric:tabular-nums}.tile .s{font-size:12px}
+.alerts{display:grid;gap:8px}
+.al{display:flex;gap:10px;align-items:flex-start;background:var(--card);border-radius:10px;padding:10px 12px;font-size:14px}
+.dot{width:10px;height:10px;border-radius:50%;margin-top:6px;flex:none}
+.al b{font-weight:600}.al .d{color:var(--ink2);font-size:13px}
+.box{position:relative;width:100%}
+.rw{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1.4fr) repeat(3,minmax(0,.8fr));gap:8px;align-items:center;font-size:13px;padding:8px 4px;border-bottom:1px solid var(--line);cursor:pointer}
+.rw:hover{background:var(--card)}.rw.h{cursor:default;color:var(--muted);font-size:12px}.rw.h:hover{background:none}
+.num{text-align:right;font-variant-numeric:tabular-nums}
+.bd{font-size:12px;padding:2px 8px;border-radius:6px;display:inline-block;margin:1px 2px 1px 0}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0 12px}
+.chip{font:inherit;font-size:13px;padding:4px 12px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--ink);cursor:pointer}
+.chip.on{background:var(--accbg);color:var(--acc);border-color:var(--acc)}
+.leg{display:flex;flex-wrap:wrap;gap:16px;font-size:12px;color:var(--ink2);margin:0 0 6px}
+.leg span{display:flex;align-items:center;gap:5px}.sw{width:10px;height:10px;border-radius:2px}.dash{width:14px;border-top:2px dashed}
+.foot{color:var(--muted);font-size:12px;margin-top:32px}
+.err{background:var(--badbg);color:var(--bad);padding:12px;border-radius:10px}
+@media (max-width:600px){.rw{grid-template-columns:minmax(0,1.3fr) minmax(0,1.2fr) repeat(2,minmax(0,.8fr))}.rw .m8{display:none}}
+</style>
+</head>
+<body>
+<main>
+<h1>Radar de mercado</h1>
+<div class="sub" id="upd">Cargando datos…</div>
+
+<div class="grid" id="tiles"></div>
+
+<h2>Alertas</h2>
+<p class="hint">Reglas de reducción en escalones. Se evalúan con el último dato semanal.</p>
+<div class="alerts" id="alerts"></div>
+
+<h2>Mapa de rotación sectorial</h2>
+<p class="hint">Horizontal: fuerza relativa del sector vs. S&amp;P 500 (sobre su media de 40 semanas). Vertical: cambio de esa fuerza en 8 semanas. Toca un sector para ver su detalle.</p>
+<div class="box" style="height:380px"><canvas id="rrg" role="img" aria-label="Mapa de rotación de 11 sectores"></canvas></div>
+<div style="margin-top:16px">
+<div class="rw h"><span>Sector</span><span>Estado</span><span class="num">vs 200d</span><span class="num">Fuerza rel.</span><span class="num m8">Mom. 8s</span></div>
+<div id="tbl"></div></div>
+
+<h2>Detalle</h2>
+<div class="chips" id="chips"></div>
+<p class="hint" id="cap1"></p>
+<div class="box" style="height:240px"><canvas id="d" role="img" aria-label="Distancia a la media de 200 días"></canvas></div>
+<div class="leg" style="margin-top:20px"><span id="cap2"></span><span><i class="sw" style="background:#2a78d6"></i>Sector ÷ S&amp;P 500</span><span><i class="dash" style="border-color:#eb6834"></i>Su media 40 sem.</span></div>
+<div class="box" style="height:200px"><canvas id="r" role="img" aria-label="Fuerza relativa contra el S&P 500"></canvas></div>
+
+<h2>Posicionamiento de hedge funds en futuros Nasdaq-100</h2>
+<p class="hint">CFTC, "Leveraged Funds". Cortos en máximo de 52 semanas suele marcar capitulación (no vender). Cortos subiendo rápido con largos planos = nerviosismo.</p>
+<div class="leg"><span><i class="sw" style="background:#1baf7a"></i>Largos</span><span><i class="dash" style="border-color:#e34948"></i>Cortos</span></div>
+<div class="box" style="height:220px"><canvas id="cot" role="img" aria-label="Contratos largos y cortos de hedge funds"></canvas></div>
+
+<p class="foot">Fuentes: FRED (S&amp;P 500, Nasdaq-100, PHLX Semiconductor, Nasdaq US Benchmark sector indexes, VIX, ICE BofA HY spread) y CFTC Traders in Financial Futures. Datos semanales; la media de 40 semanas aproxima la de 200 días. Herramienta informativa, no es asesoría financiera.</p>
+</main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>
+const SECTORS=["Tecnología","Telecom","Salud","Financieras","Real estate","Consumo discrecional","Consumo básico","Industriales","Materiales","Energía","Utilities"];
+const DETAIL=["Nasdaq-100","Tecnología","Semis (SOX)","S&P 500",...SECTORS.slice(1)];
+const QN=["Líder","Debilitándose","Rezagado","Mejorando"],QC=["#0ca30c","#fab219","#d03b3b","#2a78d6"];
+const QS=[["var(--okbg)","var(--ok)"],["var(--warnbg)","var(--warn)"],["var(--badbg)","var(--bad)"],["var(--accbg)","var(--acc)"]];
+const dark=matchMedia("(prefers-color-scheme: dark)").matches;
+const grid=dark?"#2c2c2a":"#e1e0d9",tick="#898781",ink=dark?"#c3c2b7":"#52514e";
+const sg=v=>v==null||isNaN(v)?"–":(v>0?"+":"")+v.toFixed(1)+"%";
+const $=id=>document.getElementById(id);
+
+function ma(a,n){return a.map((_,i)=>{if(i<n-1)return null;let s=0;for(let j=i-n+1;j<=i;j++){if(a[j]==null)return null;s+=a[j]}return s/n})}
+function analyze(px,spx){
+  const N=px.length,m=ma(px,40),d=px.map((v,i)=>m[i]&&v!=null?(v/m[i]-1)*100:null);
+  const s=d.filter(x=>x!=null).sort((a,b)=>a-b),p90=s[Math.floor(s.length*.9)];
+  const rs=px.map((v,i)=>v!=null&&spx[i]?v/spx[i]*100:null),rm=ma(rs,40);
+  return{px,d,p90,now:d[N-1],prev:d[N-2],rs,rm,rsr:(rs[N-1]/rm[N-1]-1)*100,mom:(rs[N-1]/rs[N-9]-1)*100};
+}
+const quad=a=>a.rsr>=0?(a.mom>=0?0:1):(a.mom>=0?3:2);
+
+fetch("data.json?t="+Date.now()).then(r=>{if(!r.ok)throw new Error(r.status);return r.json()}).then(render).catch(e=>{
+  $("upd").innerHTML='<div class="err">No se pudieron cargar los datos ('+e.message+'). Revisa que data.json exista en el repositorio.</div>';
+});
+
+function render(D){
+  const L=D.labels,S=D.series,spx=S["S&P 500"],A={};
+  for(const k of DETAIL)A[k]=analyze(S[k],spx);
+  $("upd").textContent="Datos al "+D.last_week+" · actualizado "+D.updated;
+
+  // ---- tiles
+  const ndx=A["Nasdaq-100"],tec=A["Tecnología"],sp=A["S&P 500"];
+  const state=a=>a.now<0?["Debajo de su media","var(--bad)"]:a.now>=15||a.now>=a.p90?["Sobreextendido","var(--warn)"]:["Tendencia sana","var(--ok)"];
+  const tile=(n,a)=>{const s=state(a);return `<div class="tile"><div class="l">${n} vs 200d</div><div class="v">${sg(a.now)}</div><div class="s" style="color:${s[1]}">${s[0]}</div></div>`};
+  const last=a=>{for(let i=a.length-1;i>=0;i--)if(a[i]!=null)return a[i]};
+  const vix=last(S["VIX"]),hy=last(S["HY spread"]);
+  const lead=SECTORS.filter(k=>quad(A[k])===0).length;
+  const regime=ndx.now<0?["Defensivo","var(--bad)"]:ndx.now>=15?["Precaución","var(--warn)"]:["Ofensivo","var(--ok)"];
+  $("tiles").innerHTML=tile("Nasdaq-100",ndx)+tile("Tecnología",tec)+tile("S&P 500",sp)+
+   `<div class="tile"><div class="l">Régimen</div><div class="v" style="color:${regime[1]}">${regime[0]}</div><div class="s" style="color:var(--muted)">${lead} de 11 sectores líderes</div></div>`+
+   `<div class="tile"><div class="l">VIX</div><div class="v">${vix?.toFixed(1)}</div><div class="s" style="color:${vix>25?"var(--bad)":vix>20?"var(--warn)":"var(--ok)"}">${vix>25?"Estrés alto":vix>20?"Elevado":"Calmo"}</div></div>`+
+   `<div class="tile"><div class="l">Spread high yield</div><div class="v">${hy?.toFixed(2)}%</div><div class="s" style="color:${hy>5?"var(--bad)":hy>4?"var(--warn)":"var(--ok)"}">${hy>5?"Estrés de crédito":hy>4?"Ampliándose":"Normal"}</div></div>`;
+
+  // ---- alertas
+  const C=D.cot,n=C.short.length,sh52=Math.max(...C.short.slice(-52)),sh8=C.short[n-9],lg8=C.long[n-9];
+  const prevMaxN=Math.max(...S["Nasdaq-100"].slice(-27,-1)),ndxNew=S["Nasdaq-100"].at(-1)>=prevMaxN;
+  const rules=[
+    {on:ndx.now>=15,t:"Sobreextensión Nasdaq-100",d:`Distancia a su media: ${sg(ndx.now)} (umbral +15%). Acción: recortar un escalón (10–15%) por semana, máx. 40%.`},
+    {on:tec.now>=tec.p90,t:"Sobreextensión Tecnología",d:`Distancia: ${sg(tec.now)} (su percentil 90: ${sg(tec.p90)}). Acción: otro escalón de recorte.`},
+    {on:ndx.now<0,t:"Ruptura de tendencia",d:`Nasdaq-100 ${ndx.now<0?"debajo":"arriba"} de su media de 200 días (${sg(ndx.now)}). Si está debajo: bajar a 50% o menos invertido.`},
+    {on:ndx.prev<0&&ndx.now>=0,t:"Recuperación de tendencia",d:"Nasdaq-100 volvió arriba de su media esta semana. Acción: subir exposición gradualmente."},
+    {on:C.short[n-1]>=sh52,t:"Capitulación de hedge funds",d:`Cortos en máximo de 52 semanas (${C.short[n-1].toLocaleString()}). Acción: no vender en pánico.`},
+    {on:C.short[n-1]>=sh8*1.25&&C.long[n-1]<=lg8*1.05,t:"Coberturas acelerando",d:`Cortos ${sg((C.short[n-1]/sh8-1)*100)} en 8 semanas con largos planos. Señal de nerviosismo.`},
+    {on:ndxNew,t:"Nasdaq-100 en máximo de 6 meses",d:"Compara con tu portafolio: si tú no haces máximo, hay divergencia. Acción: recortar un escalón."},
+  ];
+  rules.sort((a,b)=>b.on-a.on);
+  $("alerts").innerHTML=rules.map(r=>`<div class="al"><i class="dot" style="background:${r.on?"#d03b3b":"#b4b2a9"}"></i><div><b>${r.t}</b> · <span style="color:${r.on?"var(--bad)":"var(--muted)"}">${r.on?"ACTIVA":"inactiva"}</span><div class="d">${r.d}</div></div></div>`).join("");
+
+  // ---- RRG
+  const ks=SECTORS,xr=Math.max(...ks.map(k=>Math.abs(A[k].rsr)))*1.25||5,yr=Math.max(...ks.map(k=>Math.abs(A[k].mom)))*1.2||5;
+  const qp={id:"q",beforeDraw(c){const{ctx,chartArea:a,scales:{x,y}}=c,x0=x.getPixelForValue(0),y0=y.getPixelForValue(0);ctx.save();ctx.strokeStyle=tick;ctx.beginPath();ctx.moveTo(x0,a.top);ctx.lineTo(x0,a.bottom);ctx.moveTo(a.left,y0);ctx.lineTo(a.right,y0);ctx.stroke();ctx.font="12px sans-serif";ctx.fillStyle=tick;ctx.textAlign="right";ctx.fillText("Líder",a.right-6,a.top+14);ctx.fillText("Debilitándose",a.right-6,a.bottom-6);ctx.textAlign="left";ctx.fillText("Mejorando",a.left+6,a.top+14);ctx.fillText("Rezagado",a.left+6,a.bottom-6);ctx.restore()},
+    afterDatasetsDraw(c){const{ctx}=c;ctx.save();ctx.font="12px sans-serif";ctx.fillStyle=ink;c.getDatasetMeta(0).data.forEach((p,i)=>{const r=p.x>c.chartArea.right-110;ctx.textAlign=r?"right":"left";ctx.fillText(ks[i],p.x+(r?-9:9),p.y+4)});ctx.restore()}};
+  new Chart($("rrg"),{type:"scatter",data:{datasets:[{data:ks.map(k=>({x:A[k].rsr,y:A[k].mom})),pointRadius:6,pointHoverRadius:8,pointBackgroundColor:ks.map(k=>QC[quad(A[k])]),pointBorderColor:dark?"#151515":"#fcfcfb",pointBorderWidth:2}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>ks[c.dataIndex]+": fuerza "+sg(c.parsed.x)+", mom. "+sg(c.parsed.y)}}},
+    scales:{x:{min:-xr,max:xr,title:{display:true,text:"Fuerza relativa vs. S&P 500",color:tick},ticks:{color:tick,callback:v=>Math.round(v)+"%"},grid:{color:grid}},y:{min:-yr,max:yr,title:{display:true,text:"Cambio 8 semanas",color:tick},ticks:{color:tick,callback:v=>Math.round(v)+"%"},grid:{color:grid}}},
+    onClick:(e,el)=>{if(el.length)show(ks[el[0].index])}},plugins:[qp]});
+
+  const ord=ks.slice().sort((a,b)=>([0,3,1,2].indexOf(quad(A[a]))-[0,3,1,2].indexOf(quad(A[b])))||A[b].rsr-A[a].rsr);
+  $("tbl").innerHTML=ord.map(k=>{const a=A[k],q=quad(a),ex=a.now>=a.p90;return `<div class="rw" data-k="${k}"><span>${k}</span><span><span class="bd" style="background:${QS[q][0]};color:${QS[q][1]}">${QN[q]}</span>${ex?`<span class="bd" style="background:var(--warnbg);color:var(--warn)">Extendido</span>`:""}</span><span class="num" style="color:${a.now<0?"var(--bad)":"inherit"}">${sg(a.now)}</span><span class="num">${sg(a.rsr)}</span><span class="num m8">${sg(a.mom)}</span></div>`}).join("");
+  document.querySelectorAll(".rw[data-k]").forEach(r=>r.onclick=()=>{show(r.dataset.k);$("chips").scrollIntoView({behavior:"smooth"})});
+
+  // ---- detalle
+  const xs={ticks:{color:tick,maxTicksLimit:8,callback:function(v){return this.getLabelForValue(v).slice(0,7)}},grid:{display:false}};
+  const base={responsive:true,maintainAspectRatio:false,interaction:{mode:"index",intersect:false}};
+  const cd=new Chart($("d"),{type:"line",data:{labels:L,datasets:[{data:[],borderColor:"#6250d6",borderWidth:2,tension:.2,pointBorderWidth:0,pointBackgroundColor:"#e34948"},{data:[],borderColor:"#e34948",borderDash:[4,4],borderWidth:1,pointRadius:0},{data:[],borderColor:tick,borderWidth:1,pointRadius:0}]},
+    options:{...base,plugins:{legend:{display:false},tooltip:{filter:i=>i.datasetIndex===0,callbacks:{label:c=>"Distancia: "+sg(c.parsed.y)}}},scales:{x:xs,y:{ticks:{color:tick,callback:v=>v+"%"},grid:{color:grid}}}}});
+  const cr=new Chart($("r"),{type:"line",data:{labels:L,datasets:[{data:[],borderColor:"#2a78d6",borderWidth:2,pointRadius:0,tension:.2},{data:[],borderColor:"#eb6834",borderDash:[5,4],borderWidth:2,pointRadius:0}]},
+    options:{...base,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>(c.datasetIndex?"Media: ":"Fuerza rel.: ")+c.parsed.y.toFixed(1)}}},scales:{x:xs,y:{ticks:{color:tick},grid:{color:grid}}}}});
+  function show(k){const a=A[k];
+    cd.data.datasets[0].data=a.d;cd.data.datasets[0].pointRadius=a.d.map(v=>v!=null&&v>=a.p90?3:0);
+    cd.data.datasets[1].data=a.d.map(v=>v==null?null:a.p90);cd.data.datasets[2].data=a.d.map(v=>v==null?null:0);cd.update();
+    const b=a.rs.find(v=>v!=null);cr.data.datasets[0].data=a.rs.map(v=>v==null?null:v/b*100);cr.data.datasets[1].data=a.rm.map(v=>v==null?null:v/b*100);cr.update();
+    $("cap1").textContent=k+": distancia a su media de 200 días. Línea roja = su percentil 90 ("+sg(a.p90)+"); puntos rojos = sobreextendido.";
+    $("cap2").textContent=k+" vs. S&P 500 (base 100):";
+    document.querySelectorAll(".chip").forEach(c=>c.classList.toggle("on",c.dataset.k===k));}
+  DETAIL.forEach(k=>{const b=document.createElement("button");b.className="chip";b.dataset.k=k;b.textContent=k;b.onclick=()=>show(k);$("chips").appendChild(b)});
+  show("Nasdaq-100");
+
+  // ---- COT
+  new Chart($("cot"),{type:"line",data:{labels:C.date,datasets:[{data:C.long,borderColor:"#1baf7a",borderWidth:2,pointRadius:0,tension:.2},{data:C.short,borderColor:"#e34948",borderDash:[5,4],borderWidth:2,pointRadius:0,tension:.2}]},
+    options:{...base,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>(c.datasetIndex?"Cortos: ":"Largos: ")+c.parsed.y.toLocaleString()}}},scales:{x:xs,y:{ticks:{color:tick,callback:v=>Math.round(v/1000)+"k"},grid:{color:grid}}}}});
+}
+</script>
+</body>
+</html>
