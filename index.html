@@ -185,15 +185,22 @@ function render(D){
         o.tooltip.setActiveElements(act,{x:o.scales.x.getPixelForValue(j),y:o.chartArea.top+10});o.update("none")})},
     afterDraw(c){if(!hov||!SYNC.includes(c))return;const j=near(c.data.labels,hov),x=c.scales.x.getPixelForValue(j),{ctx,chartArea:a}=c;
       ctx.save();ctx.strokeStyle=ink;ctx.lineWidth=1;ctx.setLineDash([3,3]);ctx.beginPath();ctx.moveTo(x,a.top);ctx.lineTo(x,a.bottom);ctx.stroke();ctx.restore()}});
-  const cd=new Chart($("d"),{type:"line",data:{labels:L,datasets:[{data:[],borderColor:"#6250d6",borderWidth:2,tension:.2,pointBorderWidth:0,pointBackgroundColor:"#e34948"},{data:[],borderColor:"#e34948",borderDash:[4,4],borderWidth:1,pointRadius:0},{data:[],borderColor:tick,borderWidth:1,pointRadius:0}]},
-    options:{...base,plugins:{legend:{display:false},tooltip:{filter:i=>i.datasetIndex===0,callbacks:{label:c=>"Distance: "+sg(c.parsed.y)}}},scales:{x:xs,y:{ticks:{color:tick,callback:v=>v+"%"},grid:{color:grid}}}}});
+  const VIXK=["Nasdaq-100","S&P 500","Technology","Semis (SOX)"],VIXC="#d99a2b";
+  const cd=new Chart($("d"),{type:"line",data:{labels:L,datasets:[{data:[],borderColor:"#6250d6",borderWidth:2,tension:.2,pointBorderWidth:0,pointBackgroundColor:"#e34948"},{data:[],borderColor:"#e34948",borderDash:[4,4],borderWidth:1,pointRadius:0},{data:[],borderColor:tick,borderWidth:1,pointRadius:0},
+      {data:[],borderColor:VIXC+"bb",borderWidth:1.5,borderDash:[2,2],pointRadius:0,tension:.2,yAxisID:"y2",hidden:true}]},
+    options:{...base,plugins:{legend:{display:false},tooltip:{filter:i=>i.datasetIndex===0||i.datasetIndex===3,callbacks:{label:c=>c.datasetIndex===3?"VIX: "+c.parsed.y.toFixed(1):"Distance: "+sg(c.parsed.y)}}},
+      scales:{x:xs,y:{ticks:{color:tick,callback:v=>v+"%"},grid:{color:grid}},y2:{position:"right",display:false,min:0,suggestedMax:40,ticks:{color:VIXC,maxTicksLimit:5},grid:{drawOnChartArea:false}}}},
+    plugins:[{id:"vixband",beforeDatasetsDraw(c){const v=c.data.datasets[3];if(v.hidden||!v.data.length)return;const a=c.chartArea,x=c.scales.x,{ctx}=c;
+      const w=(x.getPixelForValue(1)-x.getPixelForValue(0))/2;ctx.save();ctx.fillStyle=VIXC+"26";
+      v.data.forEach((y,i)=>{if(y!=null&&y>25){const px=x.getPixelForValue(i);ctx.fillRect(Math.max(a.left,px-w),a.top,w*2+0.5,a.bottom-a.top)}});ctx.restore()}}]});
   const cr=new Chart($("r"),{type:"line",data:{labels:L,datasets:[{data:[],borderColor:"#2a78d6",borderWidth:2,pointRadius:0,tension:.2},{data:[],borderColor:"#eb6834",borderDash:[5,4],borderWidth:2,pointRadius:0}]},
     options:{...base,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>(c.datasetIndex?"Average: ":"Rel. strength: ")+c.parsed.y.toFixed(1)}}},scales:{x:xs,y:{ticks:{color:tick},grid:{color:grid}}}}});
   function show(k){const a=A[k];
     cd.data.datasets[0].data=a.d;cd.data.datasets[0].pointRadius=a.d.map(v=>v!=null&&v>=a.p90?3:0);
-    cd.data.datasets[1].data=a.d.map(v=>v==null?null:a.p90);cd.data.datasets[2].data=a.d.map(v=>v==null?null:0);cd.update();
+    cd.data.datasets[1].data=a.d.map(v=>v==null?null:a.p90);cd.data.datasets[2].data=a.d.map(v=>v==null?null:0);
+    const vx=VIXK.includes(k);cd.data.datasets[3].data=vx?S["VIX"]:[];cd.data.datasets[3].hidden=!vx;cd.options.scales.y2.display=vx;cd.update();
     const b=a.rs.find(v=>v!=null);cr.data.datasets[0].data=a.rs.map(v=>v==null?null:v/b*100);cr.data.datasets[1].data=a.rm.map(v=>v==null?null:v/b*100);cr.update();
-    $("cap1").textContent=k+": distance to its 200-day average. Red line = its 90th percentile ("+sg(a.p90)+"); red dots = overextended.";
+    $("cap1").textContent=k+": distance to its 200-day average. Red line = its 90th percentile ("+sg(a.p90)+"); red dots = overextended."+(vx?" Amber dotted line = VIX (right axis); shaded weeks = VIX above 25.":"");
     $("cap2").textContent=k+" vs. S&P 500 (base 100):";
     document.querySelectorAll(".chip").forEach(c=>c.classList.toggle("on",c.dataset.k===k));}
   DETAIL.forEach(k=>{const b=document.createElement("button");b.className="chip";b.dataset.k=k;b.textContent=k;b.onclick=()=>show(k);$("chips").appendChild(b)});
