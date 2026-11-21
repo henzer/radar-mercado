@@ -1,4 +1,4 @@
-"""Downloads public data (FRED + CFTC) and builds:
+"""Downloads public data (FRED + CFTC; Yahoo fills days FRED has not published yet) and builds:
   - data.json : dashboard (since 2021)
   - sim.json  : training simulator (11 sectors + market, since 2011)
 
@@ -71,6 +71,53 @@ def fred_daily(series_id, start):
     return out
 
 
+def yahoo_symbol(series_id):
+    """Yahoo Finance symbol for a FRED series, or None when Yahoo has no equivalent."""
+    if series_id.startswith("NASDAQNQUSB"):
+        return "^" + series_id[len("NASDAQ"):]  # NASDAQNQUSB10 -> ^NQUSB10
+    return {"SP500": "^GSPC", "NASDAQ100": "^NDX", "NASDAQSOX": "^SOX", "VIXCLS": "^VIX"}.get(series_id)
+
+
+def yahoo_recent(symbol):
+    """Daily closes for the last month from Yahoo, skipping a session that is still open."""
+    url = ("https://query1.finance.yahoo.com/v8/finance/chart/"
+           + urllib.parse.quote(symbol) + "?range=1mo&interval=1d")
+    req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+    with urllib.request.urlopen(req, timeout=30) as r:
+        res = json.load(r)["chart"]["result"][0]
+    meta = res["meta"]
+    off = meta.get("gmtoffset", 0)
+    reg = meta.get("currentTradingPeriod", {}).get("regular", {})
+    now = time.time()
+    out = {}
+    for ts, c in zip(res["timestamp"], res["indicators"]["quote"][0]["close"]):
+        if c is None:
+            continue
+        if reg and reg.get("start", 0) <= ts < reg.get("end", 0) and now < reg["end"]:
+            continue  # today's session has not closed yet
+        out[dt.datetime.fromtimestamp(ts + off, dt.timezone.utc).date().isoformat()] = c
+    return out
+
+
+def fill_from_yahoo(name, series_id, daily, provisional):
+    """Adds the days FRED has not published yet (FRED does not publish on weekends).
+    FRED stays the source for everything it has; the next run replaces these days."""
+    sym = yahoo_symbol(series_id)
+    if not sym or not daily:
+        return
+    try:
+        recent = yahoo_recent(sym)
+    except Exception as e:  # noqa: BLE001 - Yahoo is optional
+        print(f"  Yahoo {sym} unavailable ({e}); keeping FRED only", file=sys.stderr)
+        return
+    last = max(daily)
+    new = {d: v for d, v in recent.items() if d > last}
+    if new:
+        daily.update(new)
+        provisional[name] = sorted(new)
+        print(f"  + Yahoo {sym}: {', '.join(sorted(new))} (provisional)")
+
+
 def week_key(d):
     y, w, _ = dt.date.fromisoformat(d).isocalendar()
     return (y, w)
@@ -104,11 +151,13 @@ def write(root, name, data):
 
 def main():
     root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    weekly_all = {}
+    weekly_all, provisional = {}, {}
     for name, sid in {**FRED, **EXTRA, SIM_MARKET[0]: SIM_MARKET[1]}.items():
         start = SIM_START if (name in SECTORS or name == SIM_MARKET[0]) else START
         print(f"FRED {sid} ({name}) from {start}")
-        weekly_all[name] = to_weekly(fred_daily(sid, start))
+        daily = fred_daily(sid, start)
+        fill_from_yahoo(name, sid, daily, provisional)
+        weekly_all[name] = to_weekly(daily)
 
     # ---- dashboard (from START), S&P 500 calendar
     weekly = {n: {d: v for d, v in w.items() if d >= START}
@@ -136,7 +185,7 @@ def main():
     now = dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
     write(root, "data.json", {
         "updated": now, "last_week": labels[-1], "labels": labels,
-        "series": series, "cot": cot,
+        "series": series, "cot": cot, "provisional": provisional,
     })
 
     # ---- simulator (from SIM_START), total market calendar

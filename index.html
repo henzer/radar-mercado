@@ -103,7 +103,9 @@ fetch("data.json?t="+Date.now()).then(r=>{if(!r.ok)throw new Error(r.status);ret
 function render(D){
   const L=D.labels,S=D.series,spx=S["S&P 500"],A={};
   for(const k of DETAIL)A[k]=analyze(S[k],spx);
-  $("upd").textContent="Data as of "+D.last_week+" · updated "+D.updated;
+  const prov=[...new Set(Object.values(D.provisional||{}).flat())].sort();
+  $("upd").textContent="Data as of "+D.last_week+" · updated "+D.updated+
+    (prov.length?" · "+prov.join(", ")+" from Yahoo (provisional until FRED publishes)":"");
 
   // ---- tiles
   const ndx=A["Nasdaq-100"],tec=A["Technology"],sp=A["S&P 500"];

@@ -3,6 +3,7 @@ name: Update data
 on:
   schedule:
     - cron: "30 22 * * 1-5"   # Mon-Fri 22:30 UTC (after the US close)
+    - cron: "0 14 * * 6"      # Sat 14:00 UTC: Friday close (Yahoo fills what FRED has not published)
   workflow_dispatch: {}        # "Run workflow" button to run it manually
 
 permissions:
@@ -22,7 +23,7 @@ jobs:
       - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
-      - name: Download FRED and CFTC data
+      - name: Download FRED, CFTC and Yahoo data
         run: python scripts/update.py
       - name: Save data files
         run: |
