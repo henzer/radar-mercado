@@ -25,11 +25,14 @@ jobs:
           python-version: "3.12"
       - name: Download FRED, CFTC and Yahoo data
         run: python scripts/update.py
+      - name: Download thematic ETFs (Yahoo)
+        continue-on-error: true   # if Yahoo fails, keep the previous themes files
+        run: python scripts/themes.py
       - name: Save data files
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data.json sim.json
+          git add data.json sim.json themes.json themes.csv
           git diff --cached --quiet && exit 0
           git commit -m "Data updated $(date -u +%F)"
           git pull --rebase -X theirs origin main   # if main moved, catch up; fresh data wins

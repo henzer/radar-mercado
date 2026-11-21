@@ -31,6 +31,16 @@ h2{font-size:16px;font-weight:600;margin:32px 0 4px}
 .chips{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0 12px}
 .chip{font:inherit;font-size:13px;padding:4px 12px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--ink);cursor:pointer}
 .chip.on{background:var(--accbg);color:var(--acc);border-color:var(--acc)}
+[hidden]{display:none!important}
+.ctitle{font-size:15px;font-weight:600;margin:4px 0 2px;display:flex;flex-wrap:wrap;align-items:baseline;gap:8px}
+.ctitle .etf{font-size:12px;font-weight:600;padding:1px 8px;border-radius:6px;background:var(--accbg);color:var(--acc)}
+.ctitle a{font-size:13px;font-weight:400;color:var(--acc)}
+.perbar{display:flex;align-items:center;gap:10px;margin:10px 0 16px;padding-bottom:14px;border-bottom:1px solid var(--line)}
+.perl{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.seg{display:inline-flex;background:var(--card);border-radius:8px;padding:3px;gap:2px}
+.seg button{font:inherit;font-size:13px;padding:3px 12px;border:0;border-radius:6px;background:transparent;color:var(--ink2);cursor:pointer}
+.seg button:hover{color:var(--ink)}.seg button.on{background:var(--bg);color:var(--ink);font-weight:600;box-shadow:0 1px 2px rgba(0,0,0,.18)}
+.seg button:focus-visible{outline:2px solid var(--acc);outline-offset:1px}
 .leg{display:flex;flex-wrap:wrap;gap:16px;font-size:12px;color:var(--ink2);margin:0 0 6px}
 .leg span{display:flex;align-items:center;gap:5px}.sw{width:10px;height:10px;border-radius:2px}.dash{width:14px;border-top:2px dashed}
 .foot{color:var(--muted);font-size:12px;margin-top:32px}
@@ -52,17 +62,11 @@ h2{font-size:16px;font-weight:600;margin:32px 0 4px}
 <p class="hint">Step-down reduction rules, evaluated on the latest weekly data.</p>
 <div class="alerts" id="alerts"></div>
 
-<h2>Sector rotation map</h2>
-<p class="hint">Horizontal: sector relative strength vs. S&amp;P 500 (relative to its 40-week average). Vertical: 8-week change in that strength. Tap a sector to see its detail. Drag the timeline (or press Play) to watch sectors rotate; the tail shows the last 6 weeks.</p>
-<div class="scrub"><button class="chip" id="play">Play</button><input type="range" id="tl" aria-label="Rotation map timeline"><button class="chip" id="today">Today</button></div>
-<div class="tld" id="tld"></div>
-<div class="box" style="height:380px"><canvas id="rrg" role="img" aria-label="Rotation map of 11 sectors"></canvas></div>
-<div style="margin-top:16px">
-<div class="rw h"><span>Sector</span><span>Status</span><span class="num">vs 200d</span><span class="num">Rel. strength</span><span class="num m8">Mom. 8w</span></div>
-<div id="tbl"></div></div>
-
-<h2>Detail</h2>
+<h2 id="trend">Trend &amp; relative strength</h2>
+<div class="perbar"><span class="perl">Period</span><div class="seg" id="per" role="group" aria-label="Period for the time charts"><button class="on" data-p="0">All</button><button data-p="2">2 years</button><button data-p="1">1 year</button></div></div>
 <div class="chips" id="chips"></div>
+<div class="chips" id="tchips" hidden><span class="perl" style="align-self:center">Themes</span></div>
+<div class="ctitle" id="ctitle"></div>
 <p class="hint" id="cap1"></p>
 <div class="box" style="height:240px"><canvas id="d" role="img" aria-label="Distance to the 200-day average"></canvas></div>
 <div class="leg" style="margin-top:20px"><span id="cap2"></span><span><i class="sw" style="background:#2a78d6"></i>Sector ÷ S&amp;P 500</span><span><i class="dash" style="border-color:#eb6834"></i>Its 40-wk average</span></div>
@@ -73,7 +77,21 @@ h2{font-size:16px;font-weight:600;margin:32px 0 4px}
 <div class="leg"><span><i class="sw" style="background:#1baf7a"></i>Longs</span><span><i class="dash" style="border-color:#e34948"></i>Shorts</span></div>
 <div class="box" style="height:220px"><canvas id="cot" role="img" aria-label="Hedge fund long and short contracts"></canvas></div>
 
-<p class="foot">Sources: FRED (S&amp;P 500, Nasdaq-100, PHLX Semiconductor, Nasdaq US Benchmark sector indexes, VIX, ICE BofA HY spread) and CFTC Traders in Financial Futures. Weekly data; the 40-week average approximates the 200-day. Informational tool, not financial advice.</p>
+<h2>Sector rotation map</h2>
+<p class="hint">Horizontal: sector relative strength vs. S&amp;P 500 (relative to its 40-week average). Vertical: 8-week change in that strength. Tap a sector to see its trend above. Drag the timeline (or press Play) to watch sectors rotate; the tail shows the last 6 weeks.</p>
+<div class="scrub"><button class="chip" id="play">Play</button><input type="range" id="tl" aria-label="Rotation map timeline"><button class="chip" id="today">Today</button></div>
+<div class="tld" id="tld"></div>
+<div class="box" style="height:380px"><canvas id="rrg" role="img" aria-label="Rotation map of 11 sectors"></canvas></div>
+<div style="margin-top:16px">
+<div class="rw h"><span>Sector</span><span>Status</span><span class="num">vs 200d</span><span class="num">Rel. strength</span><span class="num m8">Mom. 8w</span></div>
+<div id="tbl"></div></div>
+
+<h2>Themes</h2>
+<p class="hint">Thematic ETFs vs. the S&amp;P 500 (SPY), with the same metrics as the sectors. Tap a theme to see its trend above. <span id="tupd"></span> <a href="themes.csv" download style="color:var(--acc)">Download weekly data (CSV)</a></p>
+<div class="rw h"><span>Theme</span><span>Status</span><span class="num">vs 200d</span><span class="num">Rel. strength</span><span class="num m8">Mom. 8w</span></div>
+<div id="ttbl"><div class="hint" style="padding:8px 4px">Loading themes…</div></div>
+
+<p class="foot">Sources: FRED (S&amp;P 500, Nasdaq-100, PHLX Semiconductor, Nasdaq US Benchmark sector indexes, VIX, ICE BofA HY spread) and CFTC Traders in Financial Futures; thematic ETFs from Yahoo Finance. Weekly data; the 40-week average approximates the 200-day. Informational tool, not financial advice.</p>
 </main>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
@@ -148,12 +166,12 @@ function render(D){
       ...ks.map(()=>({data:[],showLine:true,borderWidth:1.5,pointRadius:2,pointHoverRadius:2,borderColor:"#888",pointBackgroundColor:"#888",order:1}))]},
     options:{responsive:true,maintainAspectRatio:false,animation:{duration:0},plugins:{legend:{display:false},tooltip:{filter:i=>i.datasetIndex===0,callbacks:{label:c=>ks[c.dataIndex]+": strength "+sg(c.raw.rx)+", mom. "+sg(c.raw.ry)}}},
     scales:{x:{min:-xr,max:xr,title:{display:true,text:"Relative strength vs. S&P 500",color:tick},ticks:{color:tick,callback:v=>Math.round(v)+"%"},grid:{color:grid}},y:{min:-yr,max:yr,title:{display:true,text:"8-week change",color:tick},ticks:{color:tick,callback:v=>Math.round(v)+"%"},grid:{color:grid}}},
-    onClick:(e,el)=>{const p=el.find(x=>x.datasetIndex===0);if(p)show(ks[p.index])}},plugins:[qp]});
+    onClick:(e,el)=>{const p=el.find(x=>x.datasetIndex===0);if(p){show(ks[p.index]);$("trend").scrollIntoView({behavior:"smooth"})}}},plugins:[qp]});
 
   function drawTable(P){
     const ord=ks.slice().sort((a,b)=>([0,3,1,2].indexOf(quad(P[a]))-[0,3,1,2].indexOf(quad(P[b])))||P[b].rsr-P[a].rsr);
     $("tbl").innerHTML=ord.map(k=>{const a=P[k],q=quad(a),ex=a.now>=A[k].p90;return `<div class="rw" data-k="${k}"><span>${k}</span><span><span class="bd" style="background:${QS[q][0]};color:${QS[q][1]}">${QN[q]}</span>${ex?`<span class="bd" style="background:var(--warnbg);color:var(--warn)">Extended</span>`:""}</span><span class="num" style="color:${a.now<0?"var(--bad)":"inherit"}">${sg(a.now)}</span><span class="num">${sg(a.rsr)}</span><span class="num m8">${sg(a.mom)}</span></div>`}).join("");
-    document.querySelectorAll(".rw[data-k]").forEach(r=>r.onclick=()=>{show(r.dataset.k);$("chips").scrollIntoView({behavior:"smooth"})});
+    document.querySelectorAll(".rw[data-k]").forEach(r=>r.onclick=()=>{show(r.dataset.k);$("trend").scrollIntoView({behavior:"smooth"})});
   }
   function frame(t){
     const P={};ks.forEach(k=>P[k]=at(A[k],t));
@@ -186,30 +204,66 @@ function render(D){
     afterDraw(c){if(!hov||!SYNC.includes(c))return;const j=near(c.data.labels,hov),x=c.scales.x.getPixelForValue(j),{ctx,chartArea:a}=c;
       ctx.save();ctx.strokeStyle=ink;ctx.lineWidth=1;ctx.setLineDash([3,3]);ctx.beginPath();ctx.moveTo(x,a.top);ctx.lineTo(x,a.bottom);ctx.stroke();ctx.restore()}});
   const VIXK=["Nasdaq-100","S&P 500","Technology","Semis (SOX)"],VIXC="#d99a2b";
+  const fitY=s=>{s.width=48};  // same y-axis width on the 3 time charts so they line up
   const cd=new Chart($("d"),{type:"line",data:{labels:L,datasets:[{data:[],borderColor:"#6250d6",borderWidth:2,tension:.2,pointBorderWidth:0,pointBackgroundColor:"#e34948"},{data:[],borderColor:"#e34948",borderDash:[4,4],borderWidth:1,pointRadius:0},{data:[],borderColor:tick,borderWidth:1,pointRadius:0},
       {data:[],borderColor:VIXC+"bb",borderWidth:1.5,borderDash:[2,2],pointRadius:0,tension:.2,yAxisID:"y2",hidden:true}]},
     options:{...base,plugins:{legend:{display:false},tooltip:{filter:i=>i.datasetIndex===0||i.datasetIndex===3,callbacks:{label:c=>c.datasetIndex===3?"VIX: "+c.parsed.y.toFixed(1):"Distance: "+sg(c.parsed.y)}}},
-      scales:{x:xs,y:{ticks:{color:tick,callback:v=>v+"%"},grid:{color:grid}},y2:{position:"right",display:false,min:0,suggestedMax:40,ticks:{color:VIXC,maxTicksLimit:5},grid:{drawOnChartArea:false}}}},
+      scales:{x:{...xs},y:{afterFit:fitY,ticks:{color:tick,callback:v=>v+"%"},grid:{color:grid}},y2:{position:"right",display:false,min:0,suggestedMax:40,ticks:{color:VIXC,maxTicksLimit:5},grid:{drawOnChartArea:false}}}},
     plugins:[{id:"vixband",beforeDatasetsDraw(c){const v=c.data.datasets[3];if(v.hidden||!v.data.length)return;const a=c.chartArea,x=c.scales.x,{ctx}=c;
       const w=(x.getPixelForValue(1)-x.getPixelForValue(0))/2;ctx.save();ctx.fillStyle=VIXC+"26";
-      v.data.forEach((y,i)=>{if(y!=null&&y>25){const px=x.getPixelForValue(i);ctx.fillRect(Math.max(a.left,px-w),a.top,w*2+0.5,a.bottom-a.top)}});ctx.restore()}}]});
+      v.data.forEach((y,i)=>{if(y!=null&&y>25){const px=x.getPixelForValue(i);if(px+w<a.left||px-w>a.right)return;ctx.fillRect(Math.max(a.left,px-w),a.top,w*2+0.5,a.bottom-a.top)}});ctx.restore()}}]});
   const cr=new Chart($("r"),{type:"line",data:{labels:L,datasets:[{data:[],borderColor:"#2a78d6",borderWidth:2,pointRadius:0,tension:.2},{data:[],borderColor:"#eb6834",borderDash:[5,4],borderWidth:2,pointRadius:0}]},
-    options:{...base,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>(c.datasetIndex?"Average: ":"Rel. strength: ")+c.parsed.y.toFixed(1)}}},scales:{x:xs,y:{ticks:{color:tick},grid:{color:grid}}}}});
-  function show(k){const a=A[k];
+    options:{...base,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>(c.datasetIndex?"Average: ":"Rel. strength: ")+c.parsed.y.toFixed(1)}}},scales:{x:{...xs},y:{afterFit:fitY,ticks:{color:tick},grid:{color:grid}}}}});
+  let PSTART=0,curK="Nasdaq-100";const TK={};  // theme name -> ETF ticker (filled by addThemes)
+  function show(k){const a=A[k];curK=k;
     cd.data.datasets[0].data=a.d;cd.data.datasets[0].pointRadius=a.d.map(v=>v!=null&&v>=a.p90?3:0);
     cd.data.datasets[1].data=a.d.map(v=>v==null?null:a.p90);cd.data.datasets[2].data=a.d.map(v=>v==null?null:0);
-    const vx=VIXK.includes(k);cd.data.datasets[3].data=vx?S["VIX"]:[];cd.data.datasets[3].hidden=!vx;cd.options.scales.y2.display=vx;cd.update();
-    const b=a.rs.find(v=>v!=null);cr.data.datasets[0].data=a.rs.map(v=>v==null?null:v/b*100);cr.data.datasets[1].data=a.rm.map(v=>v==null?null:v/b*100);cr.update();
-    $("cap1").textContent=k+": distance to its 200-day average. Red line = its 90th percentile ("+sg(a.p90)+"); red dots = overextended."+(vx?" Amber dotted line = VIX (right axis); shaded weeks = VIX above 25.":"");
-    $("cap2").textContent=k+" vs. S&P 500 (base 100):";
-    document.querySelectorAll(".chip").forEach(c=>c.classList.toggle("on",c.dataset.k===k));}
+    const vx=VIXK.includes(k);cd.data.datasets[3].data=vx?S["VIX"]:[];cd.data.datasets[3].hidden=!vx;cd.update();
+    const b=a.rs.slice(PSTART).find(v=>v!=null);cr.data.datasets[0].data=a.rs.map(v=>v==null?null:v/b*100);cr.data.datasets[1].data=a.rm.map(v=>v==null?null:v/b*100);cr.update();
+    $("cap1").textContent=k+": distance to its 200-day average. Red line = its 90th percentile ("+sg(a.p90)+"); red dots = overextended."+(vx?" Amber dotted line = VIX (hover for its value); shaded weeks = VIX above 25.":"");
+    const tk=TK[k];$("ctitle").innerHTML=tk?`${k} <span class="etf">${tk} ETF</span> <a href="https://finance.yahoo.com/quote/${tk}/holdings/" target="_blank" rel="noopener">See its holdings ↗</a>`:k;
+    $("cap2").textContent=(tk?k+" ("+tk+")":k)+" vs. S&P 500 (base 100):";
+    document.querySelectorAll("#chips .chip,#tchips .chip").forEach(c=>c.classList.toggle("on",c.dataset.k===k));}
   DETAIL.forEach(k=>{const b=document.createElement("button");b.className="chip";b.dataset.k=k;b.textContent=k;b.onclick=()=>show(k);$("chips").appendChild(b)});
   show("Nasdaq-100");
 
+  // ---- themes (themes.json, Yahoo ETFs; optional: the page works without it)
+  const isoWk=d=>{const x=new Date(d+"T12:00:00Z");x.setUTCDate(x.getUTCDate()+3-(x.getUTCDay()+6)%7);
+    const y=x.getUTCFullYear();return y+"-"+(Math.floor((x-Date.UTC(y,0,1))/6048e5)+1)};
+  function addThemes(T){
+    const pos={};T.labels.forEach((d,i)=>pos[isoWk(d)]=i);
+    const al=v=>L.map(d=>{const i=pos[isoWk(d)];return i==null?null:v[i]});
+    const spy=al(T.series[T.benchmark]);
+    const names=Object.keys(T.series).filter(n=>n!==T.benchmark);
+    names.forEach(n=>{A[n]=analyze(al(T.series[n]),spy);TK[n]=T.tickers[n]});
+    const ok=n=>isFinite(A[n].rsr)&&isFinite(A[n].mom);
+    const ord=names.filter(n=>n!==T.reference).sort((a,b)=>ok(b)-ok(a)||([0,3,1,2].indexOf(quad(A[a]))-[0,3,1,2].indexOf(quad(A[b])))||A[b].rsr-A[a].rsr);
+    ord.push(T.reference);
+    $("ttbl").innerHTML=ord.map(n=>{const a=A[n],q=quad(a),ex=a.now>=a.p90,ref=n===T.reference;
+      const st=!ok(n)?`<span class="bd" style="color:var(--muted)">No data</span>`:`<span class="bd" style="background:${QS[q][0]};color:${QS[q][1]}">${QN[q]}</span>`+(ex?`<span class="bd" style="background:var(--warnbg);color:var(--warn)">Extended</span>`:"");
+      return `<div class="rw" data-k="${n}"${ref?' style="color:var(--muted)"':""}><span>${n} <span style="color:var(--muted)">${T.tickers[n]}${ref?" · reference":""}</span></span><span>${st}</span><span class="num" style="color:${a.now<0?"var(--bad)":"inherit"}">${sg(a.now)}</span><span class="num">${sg(a.rsr)}</span><span class="num m8">${sg(a.mom)}</span></div>`}).join("");
+    document.querySelectorAll("#ttbl .rw").forEach(r=>r.onclick=()=>{show(r.dataset.k);$("trend").scrollIntoView({behavior:"smooth"})});
+    ord.forEach(n=>{const b=document.createElement("button");b.className="chip";b.dataset.k=n;b.textContent=n;b.onclick=()=>show(n);$("tchips").appendChild(b)});
+    $("tchips").hidden=false;
+    $("tupd").textContent="Data as of "+T.labels.at(-1)+" (Yahoo Finance, adjusted close).";
+  }
+  fetch("themes.json?t="+Date.now()).then(r=>{if(!r.ok)throw new Error(r.status);return r.json()}).then(addThemes)
+    .catch(e=>{$("ttbl").innerHTML=`<div class="hint" style="padding:8px 4px">Themes are not available right now (${e.message}).</div>`});
+
   // ---- COT
   const cc=new Chart($("cot"),{type:"line",data:{labels:C.date,datasets:[{data:C.long,borderColor:"#1baf7a",borderWidth:2,pointRadius:0,tension:.2},{data:C.short,borderColor:"#e34948",borderDash:[5,4],borderWidth:2,pointRadius:0,tension:.2}]},
-    options:{...base,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>(c.datasetIndex?"Shorts: ":"Longs: ")+c.parsed.y.toLocaleString()}}},scales:{x:xs,y:{ticks:{color:tick,callback:v=>Math.round(v/1000)+"k"},grid:{color:grid}}}}});
+    options:{...base,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>(c.datasetIndex?"Shorts: ":"Longs: ")+c.parsed.y.toLocaleString()}}},scales:{x:{...xs},y:{afterFit:fitY,ticks:{color:tick,callback:v=>Math.round(v/1000)+"k"},grid:{color:grid}}}}});
   SYNC.push(cd,cr,cc);
+
+  // ---- period selector for the 3 time charts
+  function setPeriod(y){
+    const cut=y?new Date(Date.parse(L.at(-1))-y*365.25*864e5).toISOString().slice(0,10):"";
+    const i0=Math.max(0,L.findIndex(d=>d>=cut)),j0=Math.max(0,C.date.findIndex(d=>d>=cut));
+    cd.options.scales.x.min=i0;cr.options.scales.x.min=i0;cc.options.scales.x.min=j0;PSTART=i0;
+    show(curK);cc.update();
+    document.querySelectorAll("#per button").forEach(c=>c.classList.toggle("on",+c.dataset.p===y));
+  }
+  document.querySelectorAll("#per button").forEach(c=>c.onclick=()=>setPeriod(+c.dataset.p));
 
   // ---- rotation map timeline
   const tl=$("tl");tl.min=T0;tl.max=N-1;tl.step=1;
